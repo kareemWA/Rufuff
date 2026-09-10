@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        body{
+            margin: 0;
+            min-height: 100vh;
+        
+
+
+            background:#f5f7fb;
+            font-family:Arial;
+
+}
+body.dark-mode .section input{
+    color: #e9e9e9;
+    background-color: rgba(0, 0, 0, 0.308);
+    border: none;
+}
+
+body .dark-mode{
+    color: #f5f7fb;
+    background-color: rgb(24, 24, 24);
+}
+
+.section{
+
+    max-width:550px;
+
+    margin:40px auto;
+
+  
+
+    padding:30px;
+
+    border-radius:20px;
+
+    box-shadow:0 15px 35px rgba(0,0,0,.08);
+    text-align:center;
+
+    margin-bottom: 30px;
+}
+
+
+.img{
+
+    width:120px;
+
+    height:120px;
+
+    border-radius:50%;
+
+    object-fit:cover;
+
+    border:4px solid #007bff;
+
+}
+
+.section input{
+
+    margin-top:15px;
+
+}
+
+label{
+
+    display:block;
+
+    margin-top:18px;
+
+    margin-bottom:8px;
+
+    font-weight:bold;
+
+}
+
+input{
+
+    width:100%;
+
+    height:45px;
+
+    border:1px solid #ddd;
+
+    border-radius:10px;
+
+    padding:0 15px;
+
+    font-size:15px;
+
+    box-sizing:border-box;
+
+}
+
+input:focus{
+
+    border-color:#007bff;
+
+    outline:none;
+
+}
+
+button{
+
+    margin-top:30px;
+
+    width:100%;
+
+    height:48px;
+
+    border:none;
+
+    border-radius:10px;
+
+    background:#007bff;
+
+    color:white;
+
+    font-size:16px;
+
+    cursor:pointer;
+
+    transition:.3s;
+
+}
+
+button:hover{
+
+    background:#0056b3;
+
+}
+.back{
+            margin-left: -90%;
+            text-decoration: none;
+            background-color: #117bec2a;
+            padding: 10px 10px;
+            border-radius: 10px;
+            color: #aeb2b4;
+            margin-top: -20%;
+        }
+body .dark-mode.back{
+    color: black;
+}
+    </style>
+</head>
+<body class="settings-page">
+   
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <div class="section">
+        <a  href="index.html" class="back">sitting</a>
+        <div id="img" onclick="img()" class="pho-nam">
+            <img class="img" id="photo" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTH4qo2FqKLWRvoIFuXfE_reXlHh2I_DMpeWQ&s" alt="الصورة الشخصية">
+
+            <input type="file" id="imageInput" accept="image/*"></input>
+
+           
+        </div>
+        <div class="name">
+            <a>user name</a>
+            <input id="name">
+        </div>
+        <div class="email">
+            <a>email</a>
+            <input id = "email">
+        </div>
+        <div class="pass">
+            <a>password</a>
+            <input id="pass">
+        </div>
+        <div class="num-ph">
+            <a>phone</a>
+            <input id="phone">
+        </div>
+        <button onclick="replaceData()">Save</button>
+        <p id="formMessage" class="form-message" role="status" aria-live="polite"></p>
+    </div>
+    <footer class="site-footer">
+        <p>برمجة وتطوير <strong>كريم جيره</strong></p>
+        <div><a href="tel:01016355675">01016355675</a><a href="mailto:kareemgera1@gmail.com">kareemgera1@gmail.com</a></div>
+    </footer>
+     
+    <script >
+    const nameInput = document.getElementById("name");
+    const emailInput = document.getElementById("email");
+    const passInput = document.getElementById("pass");
+    const phoneInput = document.getElementById("phone");
+    const imageInput = document.getElementById("imageInput");
+    const photo = document.getElementById("photo");
+
+    // تحميل بيانات المستخدم عند فتح الصفحة
+    let user = JSON.parse(localStorage.getItem("currentUser")) || {};
+
+    async function loadUserProfile() {
+        try {
+            const response = await fetch("/api/me");
+            if (!response.ok) return;
+            const serverUser = await response.json();
+            if (!serverUser?.email) return;
+
+            user = serverUser;
+            localStorage.setItem("currentUser", JSON.stringify(serverUser));
+            renderProfile(serverUser);
+        } catch (error) {
+            console.warn("تعذر تحميل بيانات الحساب", error);
+        }
+    }
+
+    function renderProfile(profile) {
+        if (!profile) return;
+        if (profile.name) nameInput.value = profile.name;
+        if (profile.email) emailInput.value = profile.email;
+        if (profile.pass) passInput.value = profile.pass;
+        if (profile.phone) phoneInput.value = profile.phone;
+        if (profile.avatar) photo.src = profile.avatar;
+    }
+
+    renderProfile(user);
+    loadUserProfile();
+
+    // تغيير الصورة
+    imageInput.addEventListener("change", function () {
+
+        const file = this.files[0];
+
+        if (!file) return;
+
+        const reader = new FileReader();
+
+        reader.onload = function (e) {
+
+            photo.src = e.target.result;
+
+        };
+
+        reader.readAsDataURL(file);
+
+    });
+
+    // حفظ جميع البيانات
+    async function replaceData() {
+
+        const updatedUser = {
+            oldEmail: user.email,
+            name: nameInput.value,
+            email: emailInput.value,
+            pass: passInput.value,
+            phone: phoneInput.value,
+            avatar: photo.src
+        };
+
+        const message = document.getElementById("formMessage");
+        message.textContent = "جارٍ حفظ البيانات...";
+        message.className = "form-message";
+
+        try {
+            const response = await fetch("/update", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(updatedUser)
+            });
+            if (!response.ok) throw new Error(await response.text());
+            const savedUser = await response.json();
+            localStorage.setItem("currentUser", JSON.stringify(savedUser));
+            user = savedUser;
+            renderProfile(savedUser);
+            message.textContent = "تم حفظ البيانات بنجاح.";
+            message.className = "form-message success";
+        } catch (error) {
+            message.textContent = error.message || "تعذر حفظ البيانات.";
+            message.className = "form-message error";
+        }
+
+    
+    }
+   
+
+    
+
+    
+   
+</script>
+
+<script src="assets/js/support.js"></script>
+<!--Start of Tawk.to Script-->
+<script type="text/javascript">
+var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+(function(){var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];s1.async=true;s1.src='https://embed.tawk.to/6a9db71d3f122434489756ae/1k1s16jqe';s1.charset='UTF-8';s1.setAttribute('crossorigin','*');s0.parentNode.insertBefore(s1,s0);})();
+</script>
+<!--End of Tawk.to Script-->
+</body>
+</html>

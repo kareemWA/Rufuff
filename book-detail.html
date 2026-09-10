@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="تفاصيل الكتاب وآراء القراء">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>تفاصيل الكتاب | رفوف</title>
+</head>
+<body class="book-detail-page">
+    <header class="header">
+        <a href="index.html" class="site-title">ر<span>ف</span>وف</a>
+        <a href="index.html" class="detail-back">العودة إلى الكتب</a>
+    </header>
+
+    <main class="book-detail-main">
+        <p id="detailStatus" class="detail-status">جارٍ تحميل تفاصيل الكتاب...</p>
+        <section id="bookDetail" class="book-detail" hidden>
+            <div class="book-detail-hero">
+                <div class="detail-cover-wrap">
+                    <img id="detailImage" class="detail-cover" src="" alt="">
+                </div>
+                <div class="detail-info">
+                    <span id="detailCategory" class="book-category"></span>
+                    <h1 id="detailTitle"></h1>
+                    <p class="detail-author">تأليف <strong id="detailAuthor"></strong></p>
+                    <p id="detailDescription" class="detail-description"></p>
+                    <div class="detail-meta">
+                        <div class="detail-price-box"><strong id="detailPrice" class="detail-price"></strong><del id="detailOriginalPrice"></del><span id="detailDiscount" class="discount-badge"></span></div>
+                        <span id="detailRating" class="detail-rating"></span>
+                    </div>
+                    <button id="favoriteButton" class="favorite-detail" type="button">♡ إضافة للمفضلة</button>
+                    <button id="buyButton" class="btn" type="button">أضف للسلة</button>
+                    <a id="downloadButton" class="download-link" href="#" target="_blank" rel="noopener" hidden>تحميل PDF</a>
+                    <p id="purchaseMessage" class="book-message" role="status" aria-live="polite"></p>
+                </div>
+            </div>
+
+            <section class="reviews-section" aria-labelledby="reviewsTitle">
+                <div class="reviews-heading">
+                    <div>
+                        <h2 id="reviewsTitle">آراء القراء</h2>
+                        <p id="reviewsSummary">لا توجد تقييمات بعد</p>
+                    </div>
+                </div>
+                <div id="commentsList" class="comments-list"></div>
+                <form id="commentForm" class="comment-form">
+                    <h3>أضف رأيك في الكتاب</h3>
+                    <label for="rating">التقييم</label>
+                    <select id="rating" required>
+                        <option value="">اختر تقييمًا</option>
+                        <option value="5">5 نجوم</option>
+                        <option value="4">4 نجوم</option>
+                        <option value="3">3 نجوم</option>
+                        <option value="2">نجمتان</option>
+                        <option value="1">نجمة واحدة</option>
+                    </select>
+                    <label for="commentText">التعليق</label>
+                    <textarea id="commentText" rows="4" maxlength="1000" placeholder="اكتب تجربتك مع الكتاب..." required></textarea>
+                    <button class="btn" type="submit">نشر التقييم</button>
+                    <p id="commentMessage" class="form-message" role="status" aria-live="polite"></p>
+                </form>
+            </section>
+        </section>
+    </main>
+    <footer class="site-footer">
+        <p>برمجة وتطوير <strong>كريم جيره</strong></p>
+        <div><a href="tel:01016355675">01016355675</a><a href="mailto:kareemgera1@gmail.com">kareemgera1@gmail.com</a></div>
+    </footer>
+    <script src="assets/js/library.js"></script>
+    <script src="assets/js/book-detail.js"></script>
+    <script src="assets/js/support.js"></script>
+    <!--Start of Tawk.to Script-->
+    <script type="text/javascript">
+    var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+    (function(){var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];s1.async=true;s1.src='https://embed.tawk.to/6a9db71d3f122434489756ae/1k1s16jqe';s1.charset='UTF-8';s1.setAttribute('crossorigin','*');s0.parentNode.insertBefore(s1,s0);})();
+    </script>
+    <!--End of Tawk.to Script-->
+</body>
+</html>

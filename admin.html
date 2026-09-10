@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>إدارة رفوف</title>
+    <style>
+        :root { color-scheme: light; font-family: "Cairo", "Segoe UI", sans-serif; background: #f4f1eb; color: #25231f; }
+        body { margin: 0; padding: 32px; }
+        main { max-width: 1180px; margin: auto; }
+        h1 { margin-top: 0; }
+        .stats, .forms, .tables { display: grid; gap: 16px; }
+        .stats { grid-template-columns: repeat(4, 1fr); }
+        .forms { grid-template-columns: repeat(3, 1fr); margin: 24px 0; }
+        .panel { background: #fffdf8; border: 1px solid #ddd5c9; border-radius: 8px; padding: 18px; box-shadow: 0 6px 20px #3e34200d; }
+        .stat strong { display: block; font-size: 28px; margin-top: 6px; }
+        label { display: block; margin: 10px 0 4px; font-size: 14px; }
+        input, select, textarea, button { box-sizing: border-box; width: 100%; padding: 10px; border: 1px solid #cfc5b7; border-radius: 5px; font: inherit; }
+        textarea { min-height: 70px; resize: vertical; }
+        button { margin-top: 14px; background: #1f5a52; color: white; border: 0; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { text-align: right; padding: 10px 8px; border-bottom: 1px solid #e6dfd5; }
+        #message { min-height: 24px; margin: 12px 0; }
+        @media (max-width: 800px) { body { padding: 18px; } .stats, .forms { grid-template-columns: 1fr 1fr; } }
+        @media (max-width: 520px) { .stats, .forms { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<main>
+    <h1>إدارة رفوف</h1>
+    <p id="message" role="status"></p>
+    <section class="stats" aria-label="الإحصائيات">
+        <div class="panel stat">المستخدمون<strong id="usersCount">-</strong></div>
+        <div class="panel stat">الكتب<strong id="booksCount">-</strong></div>
+        <div class="panel stat">الطلبات<strong id="ordersCount">-</strong></div>
+        <div class="panel stat">الإيرادات<strong id="revenue">-</strong></div>
+    </section>
+    <section class="forms">
+        <form class="panel" id="bookForm">
+            <h2>إضافة كتاب</h2>
+            <label>العنوان<input name="title" required></label>
+            <label>المؤلف<input name="author" required></label>
+            <label>التصنيف<input name="category" required></label>
+            <label>السعر<input name="price" type="number" min="0" required></label>
+            <label>الغلاف<input name="cover" type="url" required></label>
+            <label>الملف الخاص<input name="file" type="text"></label>
+            <label>الوصف<textarea name="description"></textarea></label>
+            <button>حفظ الكتاب</button>
+        </form>
+        <form class="panel" id="seriesForm">
+            <h2>إضافة سلسلة</h2>
+            <label>الاسم<input name="name" required></label>
+            <label>الغلاف<input name="cover" type="url"></label>
+            <label>الوصف<textarea name="description"></textarea></label>
+            <button>حفظ السلسلة</button>
+        </form>
+        <form class="panel" id="couponForm">
+            <h2>إضافة كوبون</h2>
+            <label>الرمز<input name="code" required></label>
+            <label>النوع<select name="type"><option value="percentage">نسبة مئوية</option><option value="fixed">مبلغ ثابت</option></select></label>
+            <label>القيمة<input name="value" type="number" min="0" required></label>
+            <label>أقصى استخدام<input name="maxUses" type="number" min="1"></label>
+            <label>الحد الأدنى للشراء<input name="minPurchase" type="number" min="0" value="0"></label>
+            <button>حفظ الكوبون</button>
+        </form>
+    </section>
+    <section class="tables">
+        <div class="panel"><h2>الكتب الحالية</h2><table><thead><tr><th>العنوان</th><th>المؤلف</th><th>السعر</th><th>إجراء</th></tr></thead><tbody id="books"></tbody></table></div>
+        <div class="panel"><h2>السلاسل الحالية</h2><table><thead><tr><th>الاسم</th><th>الوصف</th><th>إجراء</th></tr></thead><tbody id="series"></tbody></table></div>
+        <div class="panel"><h2>آخر الطلبات</h2><table><thead><tr><th>المستخدم</th><th>الإجمالي</th><th>الحالة</th></tr></thead><tbody id="orders"></tbody></table></div>
+        <div class="panel"><h2>المستخدمون</h2><table><thead><tr><th>الاسم</th><th>البريد</th><th>الدور</th></tr></thead><tbody id="users"></tbody></table></div>
+    </section>
+</main>
+<script src="assets/js/admin.js"></script>
+</body>
+</html>

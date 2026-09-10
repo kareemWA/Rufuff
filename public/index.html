@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="رفوف، متجر كتب هادئ لاكتشاف الكتب وشرائها">
+    <link rel="icon" href="icon/icon.png">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>رفوف | متجر الكتب</title>
+</head>
+<body>
+    <header class="header">
+        <div class="brand">
+            <h1 id="title" class="site-title">ر<span>ف</span>وف</h1>
+            <button class="btn-open-list" id="menuBtn" type="button" aria-label="فتح القائمة">☰</button>
+        </div>
+        <div class="search_bar">
+            <button type="button" aria-label="بحث">⌕</button>
+            <input id="search_input" type="search" placeholder="ابحث عن كتاب أو مؤلف...">
+        </div>
+        <a href="sitting.html" class="acc">
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTH4qo2FqKLWRvoIFuXfE_reXlHh2I_DMpeWQ&s" id="photo" alt="صورة الحساب">
+            <h3 id="naMe">حسابي</h3>
+        </a>
+    </header>
+
+    <main>
+        <section class="welcome">
+            <h1>كتابك القادم ينتظرك هنا.</h1>
+            <p>كتب مختارة لعقول تحب البرمجة، التقنية، وبناء حلول رقمية أفضل.</p>
+            <span class="shop-note">وصول رقمي فوري · كتب مختارة بعناية</span>
+        </section>
+
+        <section id="nav" class="list nav">
+            <a id="home" href="index.html">⌂&nbsp; الرئيسية</a>
+            <a id="round" href="#books">▦&nbsp; كل الكتب</a>
+            <a id="about" href="#categories">◎&nbsp; التصنيفات</a>
+            <a id="favorite" href="favorites.html">♡&nbsp; المفضلة</a>
+        </section>
+        <section id="nav_bottom" class="list_bottom nav_bottom">
+            <a id="settings" href="sitting.html">⚙&nbsp; الإعدادات</a>
+            <a id="purchased" href="purchased.html">▤&nbsp; كتبي المشتراة</a>
+            <a id="logout" href="signin.html">تسجيل الدخول</a>
+        </section>
+
+        <section id="categories" class="section-heading">
+            <div>
+                <h2>كتب التكنولوجيا والمعلومات</h2>
+                <p>مصادر مختارة للتقنية والبرمجة والمعرفة الرقمية.</p>
+            </div>
+            <div class="categories" aria-label="تصنيفات الكتب">
+                <button class="category active" data-category="all">الكل</button>
+                <button class="category" data-category="برمجة وتطوير">برمجة وتطوير</button>
+                <button class="category" data-category="ذكاء اصطناعي">ذكاء اصطناعي</button>
+                <button class="category" data-category="أمن المعلومات">أمن المعلومات</button>
+                <button class="category" data-category="علوم البيانات">علوم البيانات</button>
+            </div>
+        </section>
+
+        <section id="books" class="first_videos">
+            <p class="no" id="booksStatus">جارٍ تحميل الكتب...</p>
+        </section>
+    </main>
+
+    <button class="cart-button" id="cartButton" type="button"><span class="cart-count" id="cartCount">0</span> سلة الكتب</button>
+    <footer class="site-footer">
+        <p>برمجة وتطوير <strong>كريم جيره</strong></p>
+        <div><a href="tel:01016355675">01016355675</a><a href="mailto:kareemgera1@gmail.com">kareemgera1@gmail.com</a></div>
+    </footer>
+    <script src="assets/js/library.js"></script>
+    <script src="assets/js/script.js"></script>
+    <script src="assets/js/support.js"></script>
+    <!--Start of Tawk.to Script-->
+    <script type="text/javascript">
+    var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+    (function(){var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];s1.async=true;s1.src='https://embed.tawk.to/6a9db71d3f122434489756ae/1k1s16jqe';s1.charset='UTF-8';s1.setAttribute('crossorigin','*');s0.parentNode.insertBefore(s1,s0);})();
+    </script>
+    <!--End of Tawk.to Script-->
+</body>
+</html>

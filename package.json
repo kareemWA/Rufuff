@@ -1,0 +1,21 @@
+{
+  "name": "new-folder-(16)",
+  "version": "1.0.0",
+  "description": "",
+  "main": "script-kareem.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --check server.js"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "compression": "^1.8.1",
+    "dotenv": "^16.4.7",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
+    "helmet": "^8.3.0",
+    "mongoose": "^9.9.5"
+  }
+}
