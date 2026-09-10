@@ -182,37 +182,7 @@ function isValidPaymobCallback(query) {
 async function createBooksCollection() {
     await Book.createCollection();
     await Book.bulkWrite([
-                {
-                    updateOne: {
-                        filter: { title: "مئة عام من العزلة" },
-                        update: {
-                            $set: { category: "برمجة وتطوير", pdfFile: "https://api.kamalelmarakby.com/books/XtGZYrbCoPROR1WMRfNL64ksuF30o3z5i95cEfuj.pdf" },
-                            $setOnInsert: { title: "مئة عام من العزلة", author: "غابرييل غارسيا ماركيز", price: 180, image: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=700&q=80" }
-                        },
-                        upsert: true
-                    }
-                },
-                {
-                    updateOne: {
-                        filter: { title: "العادات الذرية" },
-                        update: { $set: { category: "ذكاء اصطناعي" }, $setOnInsert: { title: "العادات الذرية", author: "جيمس كلير", price: 220, image: "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?auto=format&fit=crop&w=700&q=80" } },
-                        upsert: true
-                    }
-                },
-                {
-                    updateOne: {
-                        filter: { title: "عزاءات الفلسفة" },
-                        update: { $set: { category: "أمن المعلومات" }, $setOnInsert: { title: "عزاءات الفلسفة", author: "آلان دو بوتون", price: 195, image: "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=700&q=80" } },
-                        upsert: true
-                    }
-                },
-                {
-                    updateOne: {
-                        filter: { title: "الخيميائي" },
-                        update: { $set: { category: "علوم البيانات" }, $setOnInsert: { title: "الخيميائي", author: "باولو كويلو", price: 160, image: "https://images.unsplash.com/photo-1519682337058-a94d519337bc?auto=format&fit=crop&w=700&q=80" } },
-                        upsert: true
-                    }
-                }
+                
     ]);
     console.log("MongoDB collection ready: books");
 }
