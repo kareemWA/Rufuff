@@ -543,7 +543,28 @@ app.post("/api/books/:bookId/comments", async (req, res) => {
 });
 
 app.post("/api/purchases", async (req, res) => {
-    res.status(403).send("لا يمكن تأكيد الشراء يدويًا. يجب تأكيد الدفع من بوابة الدفع.");
+    try {
+        const userEmail = getSessionEmail(req);
+        const { bookIds } = req.body;
+        if (!userEmail) return res.status(401).send("يجب تسجيل الدخول أولًا");
+        if (!Array.isArray(bookIds) || !bookIds.length) return res.status(400).send("السلة فارغة");
+
+        const books = await Book.find({ _id: { $in: bookIds } }).select("_id").lean();
+        if (books.length !== new Set(bookIds.map(String)).size) return res.status(404).send("أحد الكتب غير موجود");
+
+        await Purchase.bulkWrite(books.map(book => ({
+            updateOne: {
+                filter: { userEmail, bookId: book._id },
+                update: { userEmail, bookId: book._id, status: "paid" },
+                upsert: true
+            }
+        })));
+        await Library.updateOne({ userEmail }, { $set: { cartBookIds: [] } });
+
+        res.json({ purchased: true });
+    } catch (error) {
+        res.status(500).send("تعذر إتمام الشراء التجريبي");
+    }
 });
 
 app.post("/api/payments/paymob", async (req, res) => {

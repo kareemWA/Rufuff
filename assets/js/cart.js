@@ -67,20 +67,20 @@ checkoutButton.addEventListener("click", async () => {
     }
 
     checkoutButton.disabled = true;
-    cartMessage.textContent = "جارٍ تجهيز الدفع الآمن...";
+    cartMessage.textContent = "جارٍ تأكيد الشراء...";
     cartMessage.className = "form-message";
     try {
-        const response = await fetch("/api/payments/paymob", {
+        const response = await fetch("/api/purchases", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ bookIds: cart.map(book => book._id) })
         });
         if (!response.ok) throw new Error(await response.text());
-        const { iframeUrl } = await response.json();
-        window.location.href = iframeUrl;
+        await window.accountLibrary.save(currentUser, [], favorites);
+        window.location.href = "purchased.html";
     } catch (error) {
         checkoutButton.disabled = false;
-        cartMessage.textContent = error.message || "تعذر بدء الدفع.";
+        cartMessage.textContent = error.message || "تعذر إتمام الشراء.";
         cartMessage.className = "form-message error";
     }
 });
