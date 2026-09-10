@@ -2,6 +2,22 @@
   "version": 2,
   "rewrites": [
     {
+      "source": "/login",
+      "destination": "/api"
+    },
+    {
+      "source": "/register",
+      "destination": "/api"
+    },
+    {
+      "source": "/logout",
+      "destination": "/api"
+    },
+    {
+      "source": "/update",
+      "destination": "/api"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api"
     }
