@@ -40,9 +40,13 @@ async function loadDashboard() {
     document.getElementById("booksCount").textContent = stats.books;
     document.getElementById("ordersCount").textContent = stats.orders;
     document.getElementById("revenue").textContent = `${stats.revenue} جنيه`;
+    const bookSeries = document.getElementById("bookSeries");
+    if (bookSeries && bookSeries.options.length === 1) {
+        bookSeries.insertAdjacentHTML("beforeend", series.map(item => `<option value="${item._id}">${escapeHtml(item.name)}</option>`).join(""));
+    }
     document.getElementById("orders").innerHTML = orders.slice(0, 20).map(order => `<tr><td>${escapeHtml(order.userId?.name || order.userId?.email || "-")}<br><small>${escapeHtml(order.userId?.email || "")}</small></td><td>${order.books.map(book => escapeHtml(book.title)).join("، ")}</td><td>${order.total} جنيه</td><td><div class="receipt-actions"><img class="receipt-thumb" src="${escapeHtml(order.receiptImage)}" alt="إيصال التحويل"><button class="view-receipt" type="button" data-receipt="${escapeHtml(order.receiptImage)}">عرض</button></div></td><td>${order.paymentStatus === "paid" ? "تم التأكيد" : order.paymentStatus === "failed" ? `مرفوض: ${escapeHtml(order.rejectionReason || "غير صحيح")}` : "قيد المراجعة"}</td><td>${order.paymentStatus === "pending" ? `<div class="payment-actions"><button class="confirm-payment" data-id="${order._id}">تأكيد الدفع</button><button class="reject-payment" data-id="${order._id}">رفض الدفع</button></div>` : "-"}</td></tr>`).join("");
     document.getElementById("users").innerHTML = users.slice(0, 20).map(user => `<tr><td>${user.name}</td><td>${user.email}</td><td>${user.role}</td></tr>`).join("");
-    document.getElementById("books").innerHTML = books.map(book => `<tr><td>${escapeHtml(book.title)}</td><td>${escapeHtml(book.author)}</td><td>${book.price} جنيه</td><td><button class="delete-resource" data-url="/api/admin/books/${book._id}" data-label="الكتاب">حذف</button></td></tr>`).join("");
+    document.getElementById("books").innerHTML = books.map(book => `<tr><td>${escapeHtml(book.title)}</td><td>${escapeHtml(book.author)}</td><td>${book.price} جنيه</td><td><select class="book-series" data-id="${book._id}"><option value="">بدون سلسلة</option>${series.map(item => `<option value="${item._id}" ${String(book.seriesId || "") === String(item._id) ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("")}</select><button class="save-book-series" data-id="${book._id}">حفظ السلسلة</button><button class="delete-resource" data-url="/api/admin/books/${book._id}" data-label="الكتاب">حذف</button></td></tr>`).join("");
     document.getElementById("series").innerHTML = series.map(item => `<tr><td>${escapeHtml(item.name)}</td><td>${escapeHtml(item.description || "-")}</td><td><button class="delete-resource" data-url="/api/admin/series/${item._id}" data-label="السلسلة">حذف</button></td></tr>`).join("");
 }
 
@@ -73,7 +77,23 @@ document.addEventListener("click", event => {
     if (rejectButton) rejectPayment(rejectButton);
     const receiptButton = event.target.closest(".view-receipt");
     if (receiptButton) window.open(receiptButton.dataset.receipt, "_blank", "noopener,noreferrer");
+    const saveSeriesButton = event.target.closest(".save-book-series");
+    if (saveSeriesButton) saveBookSeries(saveSeriesButton);
 });
+
+async function saveBookSeries(button) {
+    const select = document.querySelector(`.book-series[data-id="${button.dataset.id}"]`);
+    button.disabled = true;
+    try {
+        await request(`/api/admin/books/${button.dataset.id}/series`, { method: "PUT", body: JSON.stringify({ seriesId: select.value }) });
+        showMessage("تم تحديث سلسلة الكتاب");
+        await loadDashboard();
+    } catch (error) {
+        showMessage(error.message || "تعذر تحديث السلسلة", true);
+    } finally {
+        button.disabled = false;
+    }
+}
 
 async function confirmPayment(button) {
     if (!window.confirm("تأكيد استلام التحويل وفتح الكتاب للمستخدم؟")) return;
