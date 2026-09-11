@@ -89,7 +89,7 @@ async function loadPurchasedBooks(notify = false) {
             if (changedPayment?.status === "failed") showPaymentToast(`تم رفض الدفع. السبب: ${changedPayment.rejectionReason || "الإيصال غير صحيح أو لم يتم تحويل المبلغ المحدد"}`, true);
         }
         localStorage.setItem("paymentStatuses", JSON.stringify(paymentStatuses));
-        const response = await fetch("/api/books");
+        const response = await fetch("/api/purchased-books");
         if (!response.ok) throw new Error("تعذر تحميل الكتب");
         const books = await response.json();
         window.accountLibrary?.syncPaymentState(currentUser, payments, books);

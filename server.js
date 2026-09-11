@@ -39,7 +39,8 @@ const bookSchema = new mongoose.Schema({
     seriesId: { type: mongoose.Schema.Types.ObjectId, ref: "Series", default: null },
     image: { type: String, required: true },
     description: { type: String, default: "كتاب رقمي مختار بعناية من رفوف." },
-    pdfFile: { type: String, default: null }
+    pdfFile: { type: String, default: null },
+    deletedAt: { type: Date, default: null }
 }, { timestamps: true });
 bookSchema.index({ category: 1, createdAt: 1 });
 
@@ -318,12 +319,29 @@ app.put("/api/library", requireUser, async (req, res) => {
 
 app.get("/api/books", async (req, res) => {
     try {
-        const books = await Book.find().sort({ createdAt: 1 }).lean();
+        const books = await Book.find({ deletedAt: null }).sort({ createdAt: 1 }).lean();
         res.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
         res.json(books.map(applyBookDiscount));
     } catch (error) {
         console.error("Books query error:", error.message);
         res.status(500).send("تعذر تحميل الكتب");
+    }
+});
+
+app.get("/api/purchased-books", requireUser, async (req, res) => {
+    try {
+        const [purchases, pendingPayments] = await Promise.all([
+            Purchase.find({ userEmail: req.currentUser.email, status: "paid" }).select("bookId").lean(),
+            Payment.find({ userEmail: req.currentUser.email, status: "pending" }).select("bookIds").lean()
+        ]);
+        const bookIds = [
+            ...purchases.map(item => item.bookId),
+            ...pendingPayments.flatMap(payment => payment.bookIds)
+        ];
+        const books = await Book.find({ _id: { $in: bookIds } }).lean();
+        res.json(books.map(applyBookDiscount));
+    } catch (error) {
+        res.status(500).send("تعذر تحميل كتبك المشتراة");
     }
 });
 
@@ -370,7 +388,7 @@ app.get("/api/admin/users", requireAdmin, async (req, res) => {
 
 app.get("/api/admin/books", requireAdmin, async (req, res) => {
     try {
-        const books = await Book.find().sort({ createdAt: -1 }).lean();
+        const books = await Book.find({ deletedAt: null }).sort({ createdAt: -1 }).lean();
         res.json(books.map(applyBookDiscount));
     } catch (error) {
         res.status(500).send("تعذر تحميل الكتب");
@@ -381,15 +399,12 @@ app.delete("/api/admin/books/:bookId", requireAdmin, async (req, res) => {
     try {
         const bookId = new mongoose.Types.ObjectId(req.params.bookId);
 
-        const deletedBook = await Book.findByIdAndDelete(bookId);
-        if (!deletedBook) return res.status(404).send("الكتاب غير موجود");
-
-        await Promise.all([
-            Purchase.deleteMany({ bookId }),
-            Payment.deleteMany({ bookIds: bookId }),
-            Comment.deleteMany({ bookId }),
-            Library.updateMany({}, { $pull: { cartBookIds: bookId, favoriteBookIds: bookId } })
-        ]);
+        const deletedBook = await Book.findOneAndUpdate(
+            { _id: bookId, deletedAt: null },
+            { $set: { deletedAt: new Date() } },
+            { new: true }
+        );
+        if (!deletedBook) return res.status(404).send("الكتاب غير موجود أو محذوف بالفعل");
 
         res.status(204).end();
     } catch (error) {
@@ -455,7 +470,7 @@ app.post("/api/admin/coupons", requireAdmin, async (req, res) => {
 
 app.get("/api/books/:bookId", async (req, res) => {
     try {
-        const book = await Book.findById(req.params.bookId).lean();
+        const book = await Book.findOne({ _id: req.params.bookId, deletedAt: null }).lean();
         if (!book) return res.status(404).send("الكتاب غير موجود");
 
         const comments = await Comment.find({ bookId: book._id }).sort({ createdAt: -1 }).lean();
