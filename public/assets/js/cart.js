@@ -12,6 +12,17 @@ const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
 let cart = [];
 let favorites = [];
 
+function showPaymentToast(message, error = false) {
+    const toast = document.createElement("div");
+    toast.className = `payment-toast${error ? " error" : ""}`;
+    toast.setAttribute("role", "status");
+    toast.innerHTML = `<span></span><button type="button" aria-label="إغلاق">×</button>`;
+    toast.querySelector("span").textContent = message;
+    toast.querySelector("button").addEventListener("click", () => toast.remove());
+    document.body.appendChild(toast);
+    return toast;
+}
+
 const paymentStatus = new URLSearchParams(window.location.search).get("payment");
 if (paymentStatus === "paid") {
     cartMessage.textContent = "تم الدفع بنجاح. سيتم تحديث كتبك المشتراة.";
@@ -115,6 +126,8 @@ submitPayment.addEventListener("click", async () => {
         cartMessage.className = "form-message success";
         submitPayment.disabled = false;
         receiptInput.value = "";
+        showPaymentToast("تم إرسال إيصال التحويل بنجاح. تم حفظ طلبك، وسيتم تحويلك إلى كتبي المشتراة لمتابعة التأكيد.");
+        window.setTimeout(() => { window.location.href = "purchased.html?pending=1"; }, 1800);
         watchPaymentStatus(payment.paymentId, submittedBooks);
     } catch (error) {
         submitPayment.disabled = false;
@@ -140,7 +153,8 @@ function watchPaymentStatus(paymentId, submittedBooks) {
             cart = submittedBooks;
             await window.accountLibrary.save(currentUser, cart, favorites);
             renderCart();
-            cartMessage.textContent = `تم رفض الدفع. السبب: ${payment.rejectionReason || "الإيصال غير صحيح أو لم يتم تحويل المبلغ المحدد"}. يمكنك تعديل الإيصال وإعادة المحاولة.`;
+            showPaymentToast(`تم رفض الدفع. السبب: ${payment.rejectionReason || "الإيصال غير صحيح أو لم يتم تحويل المبلغ المحدد"}. يمكنك إعادة المحاولة.`, true);
+            cartMessage.textContent = "تمت إعادة الكتاب إلى السلة ويمكنك إعادة المحاولة.";
             cartMessage.className = "form-message error";
         } catch (error) {
             // Keep the local pending state and retry on the next interval.

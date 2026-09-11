@@ -178,6 +178,10 @@ async function refreshPurchasedBooks(visibleBooks) {
         }
         if (!purchase.purchased) return;
 
+        if (purchase.purchased && localRecord?.status !== "paid") {
+            window.accountLibrary.markPaymentRecord(currentUser, book, "paid");
+        }
+
         if (button) button.remove();
         message.textContent = book.pdfFile ? "تم شراء الكتاب" : "تم الشراء، ملف PDF غير مرفوع بعد.";
         message.className = "book-message success";

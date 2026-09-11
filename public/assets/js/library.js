@@ -73,6 +73,13 @@
         return state;
     }
 
+    function markPaymentRecord(user, book, status) {
+        const state = readPaymentState(user);
+        const id = String(book._id);
+        state.records[id] = { ...(state.records[id] || {}), book, status, rejectionReason: null };
+        writePaymentState(user, state);
+    }
+
     function clearLegacyLocalData() {
         localStorage.removeItem("bookCart");
         localStorage.removeItem("favoriteBooks");
@@ -148,5 +155,5 @@
         return saveQueue;
     }
 
-    window.accountLibrary = { load, save, clearLegacyLocalData, clearUserData, readPaymentState, savePaymentRequest, syncPaymentState };
+    window.accountLibrary = { load, save, clearLegacyLocalData, clearUserData, readPaymentState, savePaymentRequest, syncPaymentState, markPaymentRecord };
 })();
