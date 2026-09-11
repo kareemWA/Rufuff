@@ -247,6 +247,7 @@ body.dark-mode .welcome { background: linear-gradient(120deg, #29453a, #3d3b2f);
 .book-message.pending { color: #9a6815; font-weight: 700; }
 .payment-toast { position: fixed; z-index: 20; inset: 20px 20px auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; width: min(520px, calc(100% - 40px)); margin: auto; padding: 18px 20px; border: 1px solid #75b891; border-radius: 14px; background: #effaf2; color: #17683a; box-shadow: 0 14px 40px rgba(20, 60, 35, .18); font-weight: 700; }
 .payment-toast button { border: 0; background: transparent; color: inherit; font-size: 22px; cursor: pointer; }
+.payment-toast.error { border-color: #d58a82; background: #fff1ef; color: #9c3027; }
 
 /* Keep legacy auth/settings markup in the same visual language. */
 .auth-page, .settings-page { display: grid !important; place-items: center; min-height: 100vh; padding: 24px !important; background: var(--bg) !important; font-family: "Cairo", sans-serif !important; }

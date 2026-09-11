@@ -43,11 +43,12 @@ function renderPendingBook(book) {
     purchasedBooks.appendChild(article);
 }
 
-function showPaymentToast() {
+function showPaymentToast(message, error = false) {
     const toast = document.createElement("div");
-    toast.className = "payment-toast";
+    toast.className = `payment-toast${error ? " error" : ""}`;
     toast.setAttribute("role", "status");
-    toast.innerHTML = `<span>تم تأكيد دفع الكتب. أصبحت كتبك متاحة الآن.</span><button type="button" aria-label="إغلاق">×</button>`;
+    toast.innerHTML = `<span></span><button type="button" aria-label="إغلاق">×</button>`;
+    toast.querySelector("span").textContent = message;
     toast.querySelector("button").addEventListener("click", () => toast.remove());
     document.body.appendChild(toast);
     window.setTimeout(() => toast.remove(), 9000);
@@ -65,8 +66,10 @@ async function loadPurchasedBooks(notify = false) {
         const payments = paymentsResponse.ok ? await paymentsResponse.json() : [];
         const paymentStatuses = Object.fromEntries(payments.map(payment => [payment.id, payment.status]));
         const previousStatuses = JSON.parse(localStorage.getItem("paymentStatuses") || "{}");
-        if (notify && Object.entries(paymentStatuses).some(([id, status]) => status === "paid" && previousStatuses[id] === "pending")) {
-            showPaymentToast();
+        if (notify) {
+            const changedPayment = payments.find(payment => previousStatuses[payment.id] === "pending" && ["paid", "failed"].includes(payment.status));
+            if (changedPayment?.status === "paid") showPaymentToast("تم تأكيد دفع الكتب. أصبحت كتبك متاحة الآن.");
+            if (changedPayment?.status === "failed") showPaymentToast(`تم رفض الدفع. السبب: ${changedPayment.rejectionReason || "الإيصال غير صحيح أو لم يتم تحويل المبلغ المحدد"}`, true);
         }
         localStorage.setItem("paymentStatuses", JSON.stringify(paymentStatuses));
         const response = await fetch("/api/books");
@@ -93,6 +96,9 @@ async function loadPurchasedBooks(notify = false) {
         if (!ownedBooks.length && !pendingBooks.length) {
             if (latestPayment?.status === "pending") {
                 purchasedStatus.textContent = "طلبك قيد المراجعة. سيتم فتح الكتاب خلال نصف ساعة إلى ساعة، وللتأخير تواصل مع الدعم على 01016355675.";
+            } else if (latestPayment?.status === "failed") {
+                purchasedStatus.textContent = `تم رفض آخر طلب دفع: ${latestPayment.rejectionReason || "الإيصال غير صحيح أو لم يتم تحويل المبلغ المحدد"}. يمكنك إعادة المحاولة من المتجر.`;
+                purchasedStatus.className = "detail-status error";
             }
             showEmpty("لم تشترِ أي كتاب بعد", "اكتشف الكتب", "index.html");
             return;
@@ -105,6 +111,9 @@ async function loadPurchasedBooks(notify = false) {
         } else if (latestPayment?.status === "pending") {
             purchasedStatus.textContent = "بعض الكتب قيد مراجعة الدفع. ستظهر تلقائيًا بعد التأكيد.";
             purchasedStatus.className = "detail-status";
+        } else if (latestPayment?.status === "failed") {
+            purchasedStatus.textContent = `تم رفض آخر طلب دفع: ${latestPayment.rejectionReason || "الإيصال غير صحيح أو لم يتم تحويل المبلغ المحدد"}`;
+            purchasedStatus.className = "detail-status error";
         } else {
             purchasedStatus.hidden = true;
         }

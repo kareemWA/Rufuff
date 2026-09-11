@@ -22,6 +22,10 @@
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { text-align: right; padding: 10px 8px; border-bottom: 1px solid #e6dfd5; }
         #message { min-height: 24px; margin: 12px 0; }
+        .receipt-actions, .payment-actions { display: flex; align-items: center; gap: 8px; }
+        .receipt-actions button, .payment-actions button { width: auto; margin: 0; padding: 7px 10px; white-space: nowrap; }
+        .receipt-thumb { width: 48px; height: 58px; object-fit: contain; background: #f4f1eb; border: 1px solid #ddd5c9; border-radius: 4px; }
+        .reject-payment { background: #a33b30; }
         @media (max-width: 800px) { body { padding: 18px; } .stats, .forms { grid-template-columns: 1fr 1fr; } }
         @media (max-width: 520px) { .stats, .forms { grid-template-columns: 1fr; } }
     </style>

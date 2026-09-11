@@ -204,11 +204,12 @@ categoryButtons.forEach(button => {
 
 if (searchInput) searchInput.addEventListener("input", renderBooks);
 
-function showPaymentToast() {
+function showPaymentToast(message, error = false) {
     const toast = document.createElement("div");
-    toast.className = "payment-toast";
+    toast.className = `payment-toast${error ? " error" : ""}`;
     toast.setAttribute("role", "status");
-    toast.innerHTML = `<span>تم تأكيد دفع الكتب. أصبحت كتبك متاحة الآن.</span><button type="button" aria-label="إغلاق">×</button>`;
+    toast.innerHTML = `<span></span><button type="button" aria-label="إغلاق">×</button>`;
+    toast.querySelector("span").textContent = message;
     toast.querySelector("button").addEventListener("click", () => toast.remove());
     document.body.appendChild(toast);
     window.setTimeout(() => toast.remove(), 9000);
@@ -221,7 +222,9 @@ async function checkPaymentConfirmation() {
     const payments = await response.json();
     const statuses = Object.fromEntries(payments.map(payment => [payment.id, payment.status]));
     const previous = JSON.parse(localStorage.getItem("paymentStatuses") || "{}");
-    if (Object.entries(statuses).some(([id, status]) => status === "paid" && previous[id] === "pending")) showPaymentToast();
+    const changedPayment = payments.find(payment => previous[payment.id] === "pending" && ["paid", "failed"].includes(payment.status));
+    if (changedPayment?.status === "paid") showPaymentToast("تم تأكيد دفع الكتب. أصبحت كتبك متاحة الآن.");
+    if (changedPayment?.status === "failed") showPaymentToast(`تم رفض الدفع. السبب: ${changedPayment.rejectionReason || "الإيصال غير صحيح أو لم يتم تحويل المبلغ المحدد"}`, true);
     localStorage.setItem("paymentStatuses", JSON.stringify(statuses));
 }
 

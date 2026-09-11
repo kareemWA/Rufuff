@@ -57,6 +57,7 @@ const paymentSchema = new mongoose.Schema({
     userEmail: { type: String, required: true },
     bookIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Book", required: true }],
     receiptImage: { type: String, required: true },
+    rejectionReason: { type: String, default: null },
     orderNumber: { type: Number, unique: true, default: () => Date.now() + Math.floor(Math.random() * 100000) },
     amountCents: { type: Number, required: true },
     status: { type: String, enum: ["pending", "paid", "failed"], default: "pending" }
@@ -517,6 +518,7 @@ app.get("/api/payments/mine", requireUser, async (req, res) => {
         res.json(payments.map(payment => ({
             id: payment._id,
             status: payment.status,
+            rejectionReason: payment.rejectionReason,
             total: Number((payment.amountCents / 100).toFixed(2)),
             bookIds: payment.bookIds.map(book => String(book._id || book)),
             books: payment.bookIds.map(book => book.title),
@@ -543,6 +545,21 @@ app.post("/api/admin/orders/:orderId/confirm", requireAdmin, async (req, res) =>
         res.json({ confirmed: true });
     } catch (error) {
         res.status(500).send("تعذر تأكيد الدفع");
+    }
+});
+
+app.post("/api/admin/orders/:orderId/reject", requireAdmin, async (req, res) => {
+    try {
+        const reason = String(req.body.reason || "الإيصال غير صحيح أو لم يتم تحويل المبلغ المحدد").trim();
+        if (!reason) return res.status(400).send("اكتب سبب رفض الدفع");
+        const payment = await Payment.findOne({ _id: req.params.orderId, status: "pending" });
+        if (!payment) return res.status(404).send("طلب الدفع غير موجود أو تم التعامل معه بالفعل");
+        payment.status = "failed";
+        payment.rejectionReason = reason.slice(0, 300);
+        await payment.save();
+        res.json({ rejected: true });
+    } catch (error) {
+        res.status(500).send("تعذر رفض الدفع");
     }
 });
 
