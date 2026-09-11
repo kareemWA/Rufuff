@@ -46,20 +46,28 @@
     function syncPaymentState(user, payments, books = []) {
         const state = readPaymentState(user);
         const booksById = new Map(books.map(book => [String(book._id), book]));
-        payments.forEach(payment => {
+        const latestPaymentsByBook = new Map();
+        [...payments].sort((left, right) => new Date(left.createdAt || 0) - new Date(right.createdAt || 0)).forEach(payment => {
             state.statuses[payment.id] = payment.status;
             (payment.bookIds || []).forEach(bookId => {
-                const id = String(bookId);
-                const previous = state.records[id] || {};
-                state.records[id] = {
-                    ...previous,
-                    book: booksById.get(id) || previous.book,
-                    status: payment.status,
-                    paymentId: payment.id,
-                    rejectionReason: payment.rejectionReason || null
-                };
+                latestPaymentsByBook.set(String(bookId), payment);
             });
         });
+        latestPaymentsByBook.forEach((payment, id) => {
+            const previous = state.records[id] || {};
+            state.records[id] = {
+                ...previous,
+                book: booksById.get(id) || previous.book,
+                status: payment.status,
+                paymentId: payment.id,
+                rejectionReason: payment.rejectionReason || null
+            };
+        });
+        if (books.length) {
+            Object.keys(state.records).forEach(id => {
+                if (!booksById.has(id)) delete state.records[id];
+            });
+        }
         localStorage.setItem("paymentStatuses", JSON.stringify(state.statuses));
         writePaymentState(user, state);
         return state;
