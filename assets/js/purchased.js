@@ -54,6 +54,21 @@ function showPaymentToast(message, error = false) {
     window.setTimeout(() => toast.remove(), 9000);
 }
 
+function renderLocalPaymentState(state) {
+    const records = Object.values(state?.records || {}).filter(record => record.book && ["pending", "paid"].includes(record.status));
+    if (!records.length) return false;
+    purchasedBooks.innerHTML = "";
+    records.filter(record => record.status === "pending").forEach(record => renderPendingBook(record.book));
+    records.filter(record => record.status === "paid").forEach(record => renderBook(record.book, { accessUrl: `/api/books/${record.book._id}/access` }));
+    purchasedSummary.textContent = `${records.length} ${records.length === 1 ? "كتاب" : "كتب"}`;
+    purchasedStatus.hidden = false;
+    purchasedStatus.textContent = records.some(record => record.status === "pending")
+        ? "كتبك محفوظة محليًا، وبعضها قيد مراجعة الدفع وسيتم تحديثه تلقائيًا."
+        : "كتبك محفوظة محليًا ومؤكدة الدفع.";
+    purchasedStatus.className = records.some(record => record.status === "pending") ? "detail-status" : "detail-status success";
+    return true;
+}
+
 async function loadPurchasedBooks(notify = false) {
     if (!currentUser?.email) {
         purchasedStatus.hidden = true;
@@ -61,9 +76,11 @@ async function loadPurchasedBooks(notify = false) {
         return;
     }
 
+    const hasLocalState = renderLocalPaymentState(window.accountLibrary?.readPaymentState(currentUser));
     try {
         const paymentsResponse = await fetch("/api/payments/mine");
-        const payments = paymentsResponse.ok ? await paymentsResponse.json() : [];
+        if (!paymentsResponse.ok) throw new Error("تعذر مزامنة حالة الدفع");
+        const payments = await paymentsResponse.json();
         const paymentStatuses = Object.fromEntries(payments.map(payment => [payment.id, payment.status]));
         const previousStatuses = JSON.parse(localStorage.getItem("paymentStatuses") || "{}");
         if (notify) {
@@ -75,10 +92,11 @@ async function loadPurchasedBooks(notify = false) {
         const response = await fetch("/api/books");
         if (!response.ok) throw new Error("تعذر تحميل الكتب");
         const books = await response.json();
+        window.accountLibrary?.syncPaymentState(currentUser, payments, books);
         purchasedBooks.innerHTML = "";
         const checks = await Promise.all(books.map(async book => {
             const purchaseResponse = await fetch(`/api/purchases/${book._id}?email=${encodeURIComponent(currentUser.email)}`);
-            if (!purchaseResponse.ok) return null;
+            if (!purchaseResponse.ok) throw new Error("تعذر مزامنة ملكية الكتب");
             const purchase = await purchaseResponse.json();
             return purchase.purchased ? { book, purchase } : null;
         }));
@@ -118,6 +136,12 @@ async function loadPurchasedBooks(notify = false) {
             purchasedStatus.hidden = true;
         }
     } catch (error) {
+        if (hasLocalState) {
+            purchasedStatus.hidden = false;
+            purchasedStatus.textContent = "تعذر الاتصال مؤقتًا. تم الاحتفاظ بكتبك وحالاتها محليًا.";
+            purchasedStatus.className = "detail-status";
+            return;
+        }
         purchasedStatus.textContent = error.message || "تعذر تحميل كتبك المشتراة.";
         purchasedStatus.className = "detail-status error";
     }

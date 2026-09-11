@@ -89,6 +89,7 @@ submitPayment.addEventListener("click", async () => {
         return;
     }
     submitPayment.disabled = true;
+    const submittedBooks = [...cart];
     paymentMessage.textContent = "جارٍ إرسال الإيصال للمراجعة...";
     paymentMessage.className = "form-message";
     try {
@@ -104,15 +105,48 @@ submitPayment.addEventListener("click", async () => {
             body: JSON.stringify({ bookIds: cart.map(book => book._id), receiptImage })
         });
         if (!response.ok) throw new Error(await response.text());
+        const payment = await response.json();
+        window.accountLibrary.savePaymentRequest(currentUser, cart, payment.paymentId);
         await window.accountLibrary.save(currentUser, [], favorites);
         cart = [];
-        window.location.href = "purchased.html?pending=1";
+        manualPaymentPanel.hidden = true;
+        renderCart();
+        cartMessage.textContent = "تم إرسال الإيصال. الكتاب محفوظ محليًا وقيد مراجعة الدفع، وسيتم تحديث حالته تلقائيًا دون إعادة تحميل.";
+        cartMessage.className = "form-message success";
+        submitPayment.disabled = false;
+        receiptInput.value = "";
+        watchPaymentStatus(payment.paymentId, submittedBooks);
     } catch (error) {
         submitPayment.disabled = false;
         paymentMessage.textContent = error.message || "تعذر إرسال الإيصال.";
         paymentMessage.className = "form-message error";
     }
 });
+
+function watchPaymentStatus(paymentId, submittedBooks) {
+    const interval = window.setInterval(async () => {
+        try {
+            const response = await fetch("/api/payments/mine");
+            if (!response.ok) return;
+            const payment = (await response.json()).find(item => item.id === paymentId);
+            if (!payment || payment.status === "pending") return;
+            window.accountLibrary.syncPaymentState(currentUser, [payment], submittedBooks);
+            window.clearInterval(interval);
+            if (payment.status === "paid") {
+                cartMessage.textContent = "تم تأكيد دفع الكتب. أصبحت كتبك متاحة الآن دون إعادة تحميل.";
+                cartMessage.className = "form-message success";
+                return;
+            }
+            cart = submittedBooks;
+            await window.accountLibrary.save(currentUser, cart, favorites);
+            renderCart();
+            cartMessage.textContent = `تم رفض الدفع. السبب: ${payment.rejectionReason || "الإيصال غير صحيح أو لم يتم تحويل المبلغ المحدد"}. يمكنك تعديل الإيصال وإعادة المحاولة.`;
+            cartMessage.className = "form-message error";
+        } catch (error) {
+            // Keep the local pending state and retry on the next interval.
+        }
+    }, 15000);
+}
 
 async function initializeCart() {
     const library = await window.accountLibrary.load(currentUser);

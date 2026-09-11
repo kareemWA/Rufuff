@@ -18,6 +18,53 @@
         localStorage.setItem(storageKey(name, email), JSON.stringify(value));
     }
 
+    function readPaymentState(user) {
+        if (!user?.email) return { records: {}, statuses: {} };
+        try {
+            return JSON.parse(localStorage.getItem(storageKey("paymentState", user.email)) || '{"records":{},"statuses":{}}');
+        } catch {
+            return { records: {}, statuses: {} };
+        }
+    }
+
+    function writePaymentState(user, state) {
+        if (user?.email) writeLocal("paymentState", state, user.email);
+    }
+
+    function savePaymentRequest(user, books, paymentId) {
+        const state = readPaymentState(user);
+        books.forEach(book => {
+            state.records[String(book._id)] = { book, status: "pending", paymentId };
+        });
+        if (paymentId) {
+            state.statuses[paymentId] = "pending";
+            localStorage.setItem("paymentStatuses", JSON.stringify(state.statuses));
+        }
+        writePaymentState(user, state);
+    }
+
+    function syncPaymentState(user, payments, books = []) {
+        const state = readPaymentState(user);
+        const booksById = new Map(books.map(book => [String(book._id), book]));
+        payments.forEach(payment => {
+            state.statuses[payment.id] = payment.status;
+            (payment.bookIds || []).forEach(bookId => {
+                const id = String(bookId);
+                const previous = state.records[id] || {};
+                state.records[id] = {
+                    ...previous,
+                    book: booksById.get(id) || previous.book,
+                    status: payment.status,
+                    paymentId: payment.id,
+                    rejectionReason: payment.rejectionReason || null
+                };
+            });
+        });
+        localStorage.setItem("paymentStatuses", JSON.stringify(state.statuses));
+        writePaymentState(user, state);
+        return state;
+    }
+
     function clearLegacyLocalData() {
         localStorage.removeItem("bookCart");
         localStorage.removeItem("favoriteBooks");
@@ -93,5 +140,5 @@
         return saveQueue;
     }
 
-    window.accountLibrary = { load, save, clearLegacyLocalData, clearUserData };
+    window.accountLibrary = { load, save, clearLegacyLocalData, clearUserData, readPaymentState, savePaymentRequest, syncPaymentState };
 })();

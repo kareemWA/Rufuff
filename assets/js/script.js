@@ -144,10 +144,26 @@ function renderBooks() {
 async function refreshPurchasedBooks(visibleBooks) {
     if (!currentUser) return;
 
+    const localRecords = window.accountLibrary?.readPaymentState(currentUser)?.records || {};
+
     await Promise.all(visibleBooks.map(async book => {
         const card = [...booksContainer.querySelectorAll(".one_videos")]
             .find(element => element.dataset.title === book.title);
         if (!card) return;
+
+        const localRecord = localRecords[String(book._id)];
+        if (localRecord?.status === "pending" || localRecord?.status === "paid") {
+            const button = card.querySelector(".buy-book");
+            const message = card.querySelector(".book-message");
+            if (button) button.remove();
+            if (localRecord.status === "pending") {
+                message.textContent = "تم إرسال الإيصال، والكتاب بانتظار تأكيد الدفع.";
+                message.className = "book-message pending";
+            } else {
+                message.textContent = book.pdfFile ? "تم شراء الكتاب" : "تم الشراء، ملف PDF غير مرفوع بعد.";
+                message.className = "book-message success";
+            }
+        }
 
         const response = await fetch(`/api/purchases/${book._id}?email=${encodeURIComponent(currentUser.email)}`);
         if (!response.ok) return;

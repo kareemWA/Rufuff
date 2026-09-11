@@ -503,10 +503,10 @@ app.post("/api/purchases", async (req, res) => {
 
         const alreadyPending = await Payment.exists({ userEmail, bookIds: { $in: bookIds }, status: "pending" });
         if (alreadyPending) return res.status(409).send("لديك طلب قيد المراجعة بالفعل");
-        await Payment.create({ userEmail, bookIds: books.map(book => book._id), receiptImage, amountCents });
+        const payment = await Payment.create({ userEmail, bookIds: books.map(book => book._id), receiptImage, amountCents });
         await Library.updateOne({ userEmail }, { $set: { cartBookIds: [] } });
 
-        res.status(201).json({ pending: true });
+        res.status(201).json({ pending: true, paymentId: String(payment._id), bookIds: books.map(book => String(book._id)) });
     } catch (error) {
         res.status(500).send("تعذر إرسال طلب الدفع للمراجعة");
     }
