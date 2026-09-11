@@ -173,9 +173,21 @@ async function refreshPurchasedBooks(visibleBooks) {
 
 async function loadBooks() {
     try {
+        const cachedBooks = JSON.parse(localStorage.getItem("booksCache") || "null");
+        if (Array.isArray(cachedBooks) && cachedBooks.length) {
+            books = cachedBooks;
+            if (booksStatus) booksStatus.remove();
+            renderBooks();
+        }
+    } catch (error) {
+        localStorage.removeItem("booksCache");
+    }
+
+    try {
         const response = await fetch("/api/books");
         if (!response.ok) throw new Error("تعذر تحميل الكتب");
         books = await response.json();
+        localStorage.setItem("booksCache", JSON.stringify(books));
         if (booksStatus) booksStatus.remove();
         renderBooks();
     } catch (error) {

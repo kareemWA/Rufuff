@@ -318,6 +318,7 @@ app.put("/api/library", requireUser, async (req, res) => {
 app.get("/api/books", async (req, res) => {
     try {
         const books = await Book.find().sort({ createdAt: 1 }).lean();
+        res.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
         res.json(books.map(applyBookDiscount));
     } catch (error) {
         console.error("Books query error:", error.message);
