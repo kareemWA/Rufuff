@@ -33,7 +33,7 @@ function renderFavorites() {
                 <span class="book-category">${book.category}</span>
                 <h2>${book.title}</h2>
                 <p>${book.author}</p>
-                <div class="price-box"><strong class="price">${book.price} جنيه</strong><del>${book.originalPrice || book.price} جنيه</del><span class="discount-badge">خصم ${book.discountPercent || 65}%</span></div>
+                <div class="price-box"><strong class="price">${book.price} جنيه</strong><del>${book.originalPrice || book.price} جنيه</del><span class="discount-badge">خصم ${book.discountPercent || 0}%</span></div>
                 <div class="favorite-actions">
                     <a class="btn" href="book-detail.html?id=${book._id}">عرض التفاصيل</a>
                     <button class="remove-favorite" type="button">إزالة</button>

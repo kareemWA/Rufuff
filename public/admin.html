@@ -46,8 +46,9 @@
             <label>العنوان<input name="title" required></label>
             <label>المؤلف<input name="author" required></label>
             <label>التصنيف<select name="category" required><option value="">اختر التصنيف</option><option>برمجة وتطوير</option><option>ذكاء اصطناعي</option><option>أمن المعلومات</option><option>علوم البيانات</option></select></label>
-            <label>السعر الأساسي<input name="originalPrice" type="number" min="0" required></label>
-            <label>نسبة الخصم اليدوية<input name="discountPercent" type="number" min="0" max="90" value="0" required></label>
+            <label>السعر<input name="price" type="number" min="0" required></label>
+            <label>السعر الأصلي<input name="originalPrice" type="number" min="0"></label>
+            <label>نسبة الخصم اليدوية<input name="discountPercent" type="number" min="0" max="90" value="0"></label>
             <label>السلسلة<select name="seriesId" id="bookSeries"><option value="">بدون سلسلة</option></select></label>
             <label>الغلاف<input name="cover" type="url" required></label>
             <label>الملف الخاص<input name="file" type="text"></label>

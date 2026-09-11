@@ -8,6 +8,7 @@ const paymentAmount = document.getElementById("paymentAmount");
 const receiptInput = document.getElementById("receiptInput");
 const submitPayment = document.getElementById("submitPayment");
 const paymentMessage = document.getElementById("paymentMessage");
+const couponCode = document.getElementById("couponCode");
 const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
 let cart = [];
 let favorites = [];
@@ -65,7 +66,7 @@ function renderCart() {
                 <span class="book-category">${book.category}</span>
                 <h2>${book.title}</h2>
                 <p>${book.author}</p>
-                <div class="price-box"><strong class="price">${book.price} جنيه</strong><del>${book.originalPrice || book.price} جنيه</del><span class="discount-badge">خصم ${book.discountPercent || 65}%</span></div>
+                <div class="price-box"><strong class="price">${book.price} جنيه</strong><del>${book.originalPrice || book.price} جنيه</del><span class="discount-badge">خصم ${book.discountPercent || 0}%</span></div>
             </div>
             <button class="remove-cart-item" type="button" aria-label="إزالة ${book.title}">إزالة</button>`;
         item.querySelector(".remove-cart-item").addEventListener("click", () => {
@@ -113,7 +114,7 @@ submitPayment.addEventListener("click", async () => {
         const response = await fetch("/api/purchases", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ bookIds: cart.map(book => book._id), receiptImage })
+            body: JSON.stringify({ bookIds: cart.map(book => book._id), receiptImage, couponCode: couponCode.value.trim() })
         });
         if (!response.ok) throw new Error(await response.text());
         const payment = await response.json();

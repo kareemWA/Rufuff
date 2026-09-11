@@ -70,7 +70,7 @@ function renderBook(data) {
     setText(detailDescription, data.description);
     setText(detailPrice, `${data.price} جنيه`);
     setText(detailOriginalPrice, `${data.originalPrice || data.price} جنيه`);
-    setText(detailDiscount, `خصم ${data.discountPercent || 65}%`);
+    setText(detailDiscount, `خصم ${data.discountPercent || 0}%`);
     setText(detailRating, data.reviewsCount ? `★ ${data.averageRating}` : "☆ لا توجد تقييمات");
     document.title = `${data.title} | رفوف`;
     renderComments(data.comments, data.averageRating);

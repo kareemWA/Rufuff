@@ -81,7 +81,7 @@ function createBookCard(book) {
             <span class="book-category">${book.category}</span>
             <h3>${book.title}</h3>
             <p>${book.author}</p>
-            <div class="price-box"><strong class="price">${book.price} جنيه</strong><del>${book.originalPrice || book.price} جنيه</del><span class="discount-badge">خصم ${book.discountPercent || 65}%</span></div>
+            <div class="price-box"><strong class="price">${book.price} جنيه</strong><del>${book.originalPrice || book.price} جنيه</del><span class="discount-badge">خصم ${book.discountPercent || 0}%</span></div>
             <div class="book-footer">
                 <button class="btn buy-book" type="button">أضف للسلة</button>
             </div>

@@ -17,7 +17,6 @@ const storagePath = path.join(__dirname, "storage.json");
 const PORT = Number(process.env.PORT || 3000);
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/myapp";
 const DEFAULT_DISCOUNT_PERCENT = 0;
-const BOOK_CATEGORIES = ["برمجة وتطوير", "ذكاء اصطناعي", "أمن المعلومات", "علوم البيانات"];
 const SESSION_COOKIE = "book_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 const SESSION_SECRET = process.env.SESSION_SECRET || (process.env.NODE_ENV === "production" ? "" : crypto.randomBytes(32).toString("hex"));
@@ -33,7 +32,7 @@ if (process.env.NODE_ENV === "production" && (!SESSION_SECRET || SESSION_SECRET.
 const bookSchema = new mongoose.Schema({
     title: { type: String, required: true, unique: true },
     author: { type: String, required: true },
-    category: { type: String, enum: BOOK_CATEGORIES, required: true },
+    category: { type: String, enum: ["برمجة وتطوير", "ذكاء اصطناعي", "أمن المعلومات", "علوم البيانات"], required: true },
     price: { type: Number, required: true },
     originalPrice: { type: Number },
     discountPercent: { type: Number, min: 0, max: 90, default: DEFAULT_DISCOUNT_PERCENT },
@@ -60,7 +59,6 @@ const paymentSchema = new mongoose.Schema({
     bookIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Book", required: true }],
     receiptImage: { type: String, required: true },
     rejectionReason: { type: String, default: null },
-    couponCode: { type: String, default: null },
     orderNumber: { type: Number, unique: true, default: () => Date.now() + Math.floor(Math.random() * 100000) },
     amountCents: { type: Number, required: true },
     status: { type: String, enum: ["pending", "paid", "failed"], default: "pending" }
@@ -103,14 +101,13 @@ const couponSchema = new mongoose.Schema({
     value: { type: Number, required: true, min: 0 },
     maxUses: { type: Number, min: 1 },
     minPurchase: { type: Number, min: 0, default: 0 }
-    ,usedCount: { type: Number, min: 0, default: 0 }
 }, { timestamps: true });
 
 const Coupon = mongoose.model("Coupon", couponSchema);
 
 function applyBookDiscount(book) {
-    const originalPrice = Number(book.originalPrice ?? book.price);
-    const discountPercent = Math.min(90, Math.max(0, Number(book.discountPercent ?? DEFAULT_DISCOUNT_PERCENT)));
+    const originalPrice = Number(book.originalPrice || book.price);
+    const discountPercent = Math.min(90, Math.max(0, Number(book.discountPercent ?? 0)));
     const price = Math.round(originalPrice * (100 - discountPercent) / 100);
     return { ...book, originalPrice, discountPercent, price };
 }
@@ -400,6 +397,18 @@ app.delete("/api/admin/books/:bookId", requireAdmin, async (req, res) => {
     }
 });
 
+app.put("/api/admin/books/:bookId/series", requireAdmin, async (req, res) => {
+    try {
+        const seriesId = req.body.seriesId || null;
+        if (seriesId && !await Series.exists({ _id: seriesId })) return res.status(404).send("السلسلة غير موجودة");
+        const book = await Book.findByIdAndUpdate(req.params.bookId, { seriesId }, { new: true }).lean();
+        if (!book) return res.status(404).send("الكتاب غير موجود");
+        res.json(book);
+    } catch (error) {
+        res.status(400).send("تعذر تحديث السلسلة");
+    }
+});
+
 app.get("/api/admin/series", requireAdmin, async (req, res) => {
     try {
         res.json(await Series.find().sort({ createdAt: -1 }).lean());
@@ -420,24 +429,11 @@ app.delete("/api/admin/series/:seriesId", requireAdmin, async (req, res) => {
 
 app.post("/api/admin/books", requireAdmin, async (req, res) => {
     try {
-        const { title, author, category, price, originalPrice, discountPercent, seriesId, cover, file, description } = req.body;
-        if (!BOOK_CATEGORIES.includes(category)) return res.status(400).send("اختر تصنيفًا صحيحًا");
-        const book = await Book.create({ title, author, category, price: Number(price), originalPrice: Number(originalPrice || price), discountPercent: Number(discountPercent || 0), seriesId: seriesId || null, image: cover, pdfFile: file || null, description });
+        const { title, author, category, price, originalPrice, discountPercent, cover, file, description, seriesId } = req.body;
+        const book = await Book.create({ title, author, category, price: Number(price), originalPrice: Number(originalPrice || price), discountPercent: Number(discountPercent || 0), image: cover, pdfFile: file || null, description, seriesId: seriesId || null });
         res.status(201).json(book);
     } catch (error) {
         res.status(400).send("تعذر حفظ الكتاب");
-    }
-});
-
-app.put("/api/admin/books/:bookId/series", requireAdmin, async (req, res) => {
-    try {
-        const seriesId = req.body.seriesId || null;
-        if (seriesId && !(await Series.exists({ _id: seriesId }))) return res.status(404).send("السلسلة غير موجودة");
-        const book = await Book.findByIdAndUpdate(req.params.bookId, { seriesId }, { new: true }).lean();
-        if (!book) return res.status(404).send("الكتاب غير موجود");
-        res.json(book);
-    } catch (error) {
-        res.status(400).send("تعذر تحديث سلسلة الكتاب");
     }
 });
 
@@ -503,7 +499,7 @@ app.post("/api/books/:bookId/comments", async (req, res) => {
 app.post("/api/purchases", async (req, res) => {
     try {
         const userEmail = getSessionEmail(req);
-        const { bookIds, receiptImage, couponCode } = req.body;
+        const { bookIds, receiptImage } = req.body;
         if (!userEmail) return res.status(401).send("يجب تسجيل الدخول أولًا");
         if (!Array.isArray(bookIds) || !bookIds.length) return res.status(400).send("السلة فارغة");
         if (typeof receiptImage !== "string" || !/^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/i.test(receiptImage)) {
@@ -517,22 +513,19 @@ app.post("/api/purchases", async (req, res) => {
         if (alreadyPurchased) return res.status(409).send("أحد الكتب موجود بالفعل في كتبك المشتراة");
         const pricedBooks = books.map(applyBookDiscount);
         let amountCents = pricedBooks.reduce((sum, book) => sum + Math.round(book.price * 100), 0);
-        let appliedCoupon = null;
-        if (couponCode?.trim()) {
-            const coupon = await Coupon.findOne({ code: couponCode.trim().toUpperCase() }).lean();
+        const couponCode = String(req.body.couponCode || "").trim().toUpperCase();
+        if (couponCode) {
+            const coupon = await Coupon.findOne({ code: couponCode }).lean();
             if (!coupon) return res.status(400).send("كود الخصم غير صحيح");
-            if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) return res.status(400).send("انتهت استخدامات هذا الكوبون");
-            if (amountCents < Math.round(coupon.minPurchase * 100)) return res.status(400).send("قيمة الطلب أقل من الحد الأدنى للكوبون");
+            if (amountCents < Math.round(Number(coupon.minPurchase || 0) * 100)) return res.status(400).send("الطلب لا يحقق الحد الأدنى للكوبون");
             amountCents = coupon.type === "percentage"
-                ? Math.max(0, Math.round(amountCents * (100 - coupon.value) / 100))
+                ? Math.max(0, Math.round(amountCents * (100 - Math.min(100, coupon.value)) / 100))
                 : Math.max(0, amountCents - Math.round(coupon.value * 100));
-            appliedCoupon = coupon;
         }
 
         const alreadyPending = await Payment.exists({ userEmail, bookIds: { $in: bookIds }, status: "pending" });
         if (alreadyPending) return res.status(409).send("لديك طلب قيد المراجعة بالفعل");
-        const payment = await Payment.create({ userEmail, bookIds: books.map(book => book._id), receiptImage, amountCents, couponCode: appliedCoupon?.code || null });
-        if (appliedCoupon) await Coupon.updateOne({ _id: appliedCoupon._id }, { $inc: { usedCount: 1 } });
+        const payment = await Payment.create({ userEmail, bookIds: books.map(book => book._id), receiptImage, amountCents });
         await Library.updateOne({ userEmail }, { $set: { cartBookIds: [] } });
 
         res.status(201).json({ pending: true, paymentId: String(payment._id), bookIds: books.map(book => String(book._id)) });
