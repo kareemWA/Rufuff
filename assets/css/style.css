@@ -230,6 +230,7 @@ body.dark-mode .welcome { background: linear-gradient(120deg, #29453a, #3d3b2f);
 .manual-payment-panel label { display: block; margin: 18px 0 6px; font-weight: 700; }
 .manual-payment-panel input[type="file"] { display: block; width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; box-sizing: border-box; }
 .receipt-thumb { width: 64px; height: 64px; object-fit: cover; border-radius: 5px; border: 1px solid var(--border); }
+.receipt-thumb { width: 92px; height: 116px; object-fit: contain; background: #f7f4ee; cursor: zoom-in; }
 .confirm-payment { width: auto; margin: 0; padding: 8px 12px; }
 .cart-empty { padding: 40px 20px; text-align: center; }
 .cart-empty strong { font-family: Georgia, serif; font-size: 23px; font-weight: 400; }
@@ -243,6 +244,9 @@ body.dark-mode .welcome { background: linear-gradient(120deg, #29453a, #3d3b2f);
 .purchased-actions, .favorite-actions { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
 .purchased-actions .btn, .favorite-actions .btn { flex: 1; text-align: center; }
 .download-link { color: var(--primary); font-size: 11px; font-weight: 700; text-decoration: none; }
+.book-message.pending { color: #9a6815; font-weight: 700; }
+.payment-toast { position: fixed; z-index: 20; inset: 20px 20px auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; width: min(520px, calc(100% - 40px)); margin: auto; padding: 18px 20px; border: 1px solid #75b891; border-radius: 14px; background: #effaf2; color: #17683a; box-shadow: 0 14px 40px rgba(20, 60, 35, .18); font-weight: 700; }
+.payment-toast button { border: 0; background: transparent; color: inherit; font-size: 22px; cursor: pointer; }
 
 /* Keep legacy auth/settings markup in the same visual language. */
 .auth-page, .settings-page { display: grid !important; place-items: center; min-height: 100vh; padding: 24px !important; background: var(--bg) !important; font-family: "Cairo", sans-serif !important; }

@@ -494,10 +494,12 @@ app.post("/api/purchases", async (req, res) => {
 
         const books = await Book.find({ _id: { $in: bookIds } }).lean();
         if (books.length !== new Set(bookIds.map(String)).size) return res.status(404).send("أحد الكتب غير موجود");
+        const alreadyPurchased = await Purchase.exists({ userEmail, bookId: { $in: bookIds }, status: "paid" });
+        if (alreadyPurchased) return res.status(409).send("أحد الكتب موجود بالفعل في كتبك المشتراة");
         const pricedBooks = books.map(applyBookDiscount);
         const amountCents = pricedBooks.reduce((sum, book) => sum + Math.round(book.price * 100), 0);
 
-        const alreadyPending = await Payment.exists({ userEmail, bookIds: { $all: bookIds }, status: "pending" });
+        const alreadyPending = await Payment.exists({ userEmail, bookIds: { $in: bookIds }, status: "pending" });
         if (alreadyPending) return res.status(409).send("لديك طلب قيد المراجعة بالفعل");
         await Payment.create({ userEmail, bookIds: books.map(book => book._id), receiptImage, amountCents });
         await Library.updateOne({ userEmail }, { $set: { cartBookIds: [] } });
@@ -516,6 +518,7 @@ app.get("/api/payments/mine", requireUser, async (req, res) => {
             id: payment._id,
             status: payment.status,
             total: Number((payment.amountCents / 100).toFixed(2)),
+            bookIds: payment.bookIds.map(book => String(book._id || book)),
             books: payment.bookIds.map(book => book.title),
             createdAt: payment.createdAt
         })));
@@ -552,7 +555,12 @@ app.get("/api/purchases/:bookId", async (req, res) => {
             bookId: req.params.bookId,
             status: "paid"
         });
-        res.json({ purchased: Boolean(purchase), accessUrl: `/api/books/${req.params.bookId}/access` });
+        const pending = !purchase && await Payment.exists({
+            userEmail,
+            bookIds: req.params.bookId,
+            status: "pending"
+        });
+        res.json({ purchased: Boolean(purchase), pending: Boolean(pending), accessUrl: `/api/books/${req.params.bookId}/access` });
     } catch (error) {
         res.status(500).send("تعذر التحقق من الشراء");
     }

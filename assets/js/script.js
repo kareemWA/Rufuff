@@ -152,10 +152,16 @@ async function refreshPurchasedBooks(visibleBooks) {
         const response = await fetch(`/api/purchases/${book._id}?email=${encodeURIComponent(currentUser.email)}`);
         if (!response.ok) return;
         const purchase = await response.json();
-        if (!purchase.purchased) return;
-
         const button = card.querySelector(".buy-book");
         const message = card.querySelector(".book-message");
+        if (purchase.pending) {
+            if (button) button.remove();
+            message.textContent = "تم إرسال الإيصال، والكتاب بانتظار تأكيد الدفع.";
+            message.className = "book-message pending";
+            return;
+        }
+        if (!purchase.purchased) return;
+
         if (button) button.remove();
         message.textContent = book.pdfFile ? "تم شراء الكتاب" : "تم الشراء، ملف PDF غير مرفوع بعد.";
         message.className = "book-message success";
@@ -197,6 +203,30 @@ categoryButtons.forEach(button => {
 });
 
 if (searchInput) searchInput.addEventListener("input", renderBooks);
+
+function showPaymentToast() {
+    const toast = document.createElement("div");
+    toast.className = "payment-toast";
+    toast.setAttribute("role", "status");
+    toast.innerHTML = `<span>تم تأكيد دفع الكتب. أصبحت كتبك متاحة الآن.</span><button type="button" aria-label="إغلاق">×</button>`;
+    toast.querySelector("button").addEventListener("click", () => toast.remove());
+    document.body.appendChild(toast);
+    window.setTimeout(() => toast.remove(), 9000);
+}
+
+async function checkPaymentConfirmation() {
+    if (!currentUser?.email) return;
+    const response = await fetch("/api/payments/mine");
+    if (!response.ok) return;
+    const payments = await response.json();
+    const statuses = Object.fromEntries(payments.map(payment => [payment.id, payment.status]));
+    const previous = JSON.parse(localStorage.getItem("paymentStatuses") || "{}");
+    if (Object.entries(statuses).some(([id, status]) => status === "paid" && previous[id] === "pending")) showPaymentToast();
+    localStorage.setItem("paymentStatuses", JSON.stringify(statuses));
+}
+
+checkPaymentConfirmation().catch(() => {});
+window.setInterval(() => checkPaymentConfirmation().catch(() => {}), 15000);
 
 if (cartButton) {
     cartButton.addEventListener("click", () => { window.location.href = "cart.html"; });

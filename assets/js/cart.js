@@ -106,10 +106,7 @@ submitPayment.addEventListener("click", async () => {
         if (!response.ok) throw new Error(await response.text());
         await window.accountLibrary.save(currentUser, [], favorites);
         cart = [];
-        renderCart();
-        manualPaymentPanel.hidden = true;
-        cartMessage.textContent = "تم استلام طلبك. سيتم مراجعة التحويل وفتح الكتاب خلال نصف ساعة إلى ساعة. للتأخير تواصل مع الدعم على 01016355675.";
-        cartMessage.className = "form-message success";
+        window.location.href = "purchased.html?pending=1";
     } catch (error) {
         submitPayment.disabled = false;
         paymentMessage.textContent = error.message || "تعذر إرسال الإيصال.";

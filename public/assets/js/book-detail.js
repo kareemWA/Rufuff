@@ -21,6 +21,7 @@ const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
 const bookId = new URLSearchParams(window.location.search).get("id");
 let book;
 let purchased = false;
+let pending = false;
 let accessUrl = "";
 let cart = [];
 let favorites = [];
@@ -85,8 +86,9 @@ function updateFavoriteButton() {
 }
 
 function updatePurchaseButton() {
-    buyButton.textContent = purchased ? "قراءة الكتاب" : "أضف للسلة";
+    buyButton.textContent = purchased ? "قراءة الكتاب" : pending ? "بانتظار تأكيد الدفع" : "أضف للسلة";
     buyButton.classList.toggle("is-purchased", purchased);
+    buyButton.disabled = pending;
     downloadButton.hidden = !purchased;
     if (purchased) downloadButton.href = `${accessUrl}?download=1`;
 }
@@ -110,6 +112,7 @@ async function loadBook() {
     if (purchaseResponse.ok) {
         const purchase = await purchaseResponse.json();
         purchased = purchase.purchased;
+        pending = purchase.pending;
         accessUrl = purchase.accessUrl;
         updatePurchaseButton();
     }
@@ -120,6 +123,7 @@ buyButton.addEventListener("click", () => {
         window.open(accessUrl, "_blank", "noopener");
         return;
     }
+    if (pending) return;
     if (!cart.some(item => item._id === book._id)) cart.push(book);
     window.accountLibrary.save(currentUser, cart, favorites);
     purchaseMessage.textContent = "أُضيف الكتاب إلى السلة.";
