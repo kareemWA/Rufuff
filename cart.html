@@ -36,6 +36,16 @@
                 <p id="cartMessage" class="form-message" role="status" aria-live="polite"></p>
             </aside>
         </div>
+        <section id="manualPaymentPanel" class="manual-payment-panel" hidden>
+            <span class="book-category">تحويل بنكي / محفظة إلكترونية</span>
+            <h2>أرسل قيمة الطلب على الرقم</h2>
+            <a class="payment-phone" href="tel:01016355675">01016355675</a>
+            <p>حوّل مبلغ <strong id="paymentAmount">0 جنيه</strong>، ثم أرفق صورة واضحة لإيصال التحويل.</p>
+            <label for="receiptInput">صورة إيصال التحويل</label>
+            <input id="receiptInput" type="file" accept="image/png,image/jpeg,image/webp" required>
+            <button id="submitPayment" class="btn" type="button">تم الدفع وإرسال الإيصال</button>
+            <p id="paymentMessage" class="form-message" role="status" aria-live="polite"></p>
+        </section>
     </main>
     <footer class="site-footer">
         <p>برمجة وتطوير <strong>كريم جيره</strong></p>

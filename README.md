@@ -10,7 +10,7 @@ cp .env.example .env
 npm start
 ```
 
-يجب ضبط `MONGODB_URI` و`SESSION_SECRET` وبيانات Paymob في `.env`. في الإنتاج يجب استخدام HTTPS، وقيمة سرية عشوائية، والسماح بعنوان الخادم في MongoDB Atlas.
+يجب ضبط `MONGODB_URI` و`SESSION_SECRET` و`ADMIN_EMAIL` في `.env`. الدفع يتم بتحويل يدوي إلى الرقم الظاهر في السلة، ثم يراجع المسؤول صورة الإيصال ويعتمد الطلب. في الإنتاج يجب استخدام HTTPS، وقيمة سرية عشوائية، والسماح بعنوان الخادم في MongoDB Atlas.
 
 ## الأمان
 
@@ -26,7 +26,7 @@ npm start
 - السلاسل: `GET /api/series` و`GET /api/series/:id`
 - المفضلة: `GET/POST/DELETE /api/favorites`
 - المكتبة والطلبات: `GET /api/library/owned` و`GET /api/orders`
-- الدفع: `POST /api/payments/paymob` و`GET /api/payments/paymob/callback`
+- الدفع اليدوي: `POST /api/purchases` و`GET /api/payments/mine`، واعتماد المسؤول عبر `POST /api/admin/orders/:orderId/confirm`
 - الحساب والمكتبة: `GET /api/me` و`GET/PUT /api/library`، وتعتمد على جلسة HttpOnly.
 - الإدارة: `/admin.html`، مع حماية كل `/api/admin/*` بصلاحية `role=admin`. يكتسب الحساب المطابق لـ `ADMIN_EMAIL` الصلاحية عند التسجيل.
 
@@ -37,4 +37,4 @@ npm test
 npm audit --audit-level=high
 ```
 
-في الإنتاج يجب ضبط `MONGODB_URI` إلى قاعدة MongoDB متاحة، وإضافة مفاتيح Paymob، ووضع `PAYMOB_CALLBACK_URL` على نطاق HTTPS حقيقي. إذا ظهر خطأ `querySrv ECONNREFUSED` مع MongoDB Atlas، اضبط `DNS_SERVERS=1.1.1.1,8.8.8.8`. لا تضع أي أسرار فعلية في Git أو في ملفات الواجهة.
+في الإنتاج يجب ضبط `MONGODB_URI` إلى قاعدة MongoDB متاحة. إذا ظهر خطأ `querySrv ECONNREFUSED` مع MongoDB Atlas، اضبط `DNS_SERVERS=1.1.1.1,8.8.8.8`. لا تضع أي أسرار فعلية في Git أو في ملفات الواجهة.

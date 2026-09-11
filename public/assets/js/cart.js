@@ -3,6 +3,11 @@ const cartSummary = document.getElementById("cartSummary");
 const cartTotal = document.getElementById("cartTotal");
 const checkoutButton = document.getElementById("checkoutButton");
 const cartMessage = document.getElementById("cartMessage");
+const manualPaymentPanel = document.getElementById("manualPaymentPanel");
+const paymentAmount = document.getElementById("paymentAmount");
+const receiptInput = document.getElementById("receiptInput");
+const submitPayment = document.getElementById("submitPayment");
+const paymentMessage = document.getElementById("paymentMessage");
 const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
 let cart = [];
 let favorites = [];
@@ -27,6 +32,7 @@ function renderCart() {
     const total = cart.reduce((sum, book) => sum + Number(book.price || 0), 0);
     cartSummary.textContent = `${cart.length} ${cart.length === 1 ? "كتاب" : "كتب"}`;
     cartTotal.textContent = `${total} جنيه`;
+    paymentAmount.textContent = `${total} جنيه`;
     checkoutButton.disabled = !cart.length;
 
     if (!cart.length) {
@@ -66,22 +72,48 @@ checkoutButton.addEventListener("click", async () => {
         return;
     }
 
-    checkoutButton.disabled = true;
-    cartMessage.textContent = "جارٍ تأكيد الشراء...";
-    cartMessage.className = "form-message";
+    manualPaymentPanel.hidden = false;
+    manualPaymentPanel.scrollIntoView({ behavior: "smooth", block: "center" });
+});
+
+submitPayment.addEventListener("click", async () => {
+    const file = receiptInput.files[0];
+    if (!file) {
+        paymentMessage.textContent = "اختر صورة الإيصال أولًا.";
+        paymentMessage.className = "form-message error";
+        return;
+    }
+    if (!file.type.startsWith("image/") || file.size > 7 * 1024 * 1024) {
+        paymentMessage.textContent = "اختر صورة PNG أو JPG أو WEBP أقل من 7 ميجابايت.";
+        paymentMessage.className = "form-message error";
+        return;
+    }
+    submitPayment.disabled = true;
+    paymentMessage.textContent = "جارٍ إرسال الإيصال للمراجعة...";
+    paymentMessage.className = "form-message";
     try {
+        const receiptImage = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(new Error("تعذر قراءة صورة الإيصال"));
+            reader.readAsDataURL(file);
+        });
         const response = await fetch("/api/purchases", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ bookIds: cart.map(book => book._id) })
+            body: JSON.stringify({ bookIds: cart.map(book => book._id), receiptImage })
         });
         if (!response.ok) throw new Error(await response.text());
         await window.accountLibrary.save(currentUser, [], favorites);
-        window.location.href = "purchased.html";
+        cart = [];
+        renderCart();
+        manualPaymentPanel.hidden = true;
+        cartMessage.textContent = "تم استلام طلبك. سيتم مراجعة التحويل وفتح الكتاب خلال نصف ساعة إلى ساعة. للتأخير تواصل مع الدعم على 01016355675.";
+        cartMessage.className = "form-message success";
     } catch (error) {
-        checkoutButton.disabled = false;
-        cartMessage.textContent = error.message || "تعذر إتمام الشراء.";
-        cartMessage.className = "form-message error";
+        submitPayment.disabled = false;
+        paymentMessage.textContent = error.message || "تعذر إرسال الإيصال.";
+        paymentMessage.className = "form-message error";
     }
 });
 

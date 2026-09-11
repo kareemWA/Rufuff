@@ -40,7 +40,7 @@ async function loadDashboard() {
     document.getElementById("booksCount").textContent = stats.books;
     document.getElementById("ordersCount").textContent = stats.orders;
     document.getElementById("revenue").textContent = `${stats.revenue} جنيه`;
-    document.getElementById("orders").innerHTML = orders.slice(0, 20).map(order => `<tr><td>${order.userId?.email || "-"}</td><td>${order.total} جنيه</td><td>${order.paymentStatus}</td></tr>`).join("");
+    document.getElementById("orders").innerHTML = orders.slice(0, 20).map(order => `<tr><td>${escapeHtml(order.userId?.name || order.userId?.email || "-")}<br><small>${escapeHtml(order.userId?.email || "")}</small></td><td>${order.books.map(book => escapeHtml(book.title)).join("، ")}</td><td>${order.total} جنيه</td><td><a href="${order.receiptImage}" target="_blank" rel="noreferrer"><img class="receipt-thumb" src="${order.receiptImage}" alt="إيصال التحويل"></a></td><td>${order.paymentStatus === "paid" ? "تم التأكيد" : "قيد المراجعة"}</td><td>${order.paymentStatus === "pending" ? `<button class="confirm-payment" data-id="${order._id}">تأكيد الدفع</button>` : "-"}</td></tr>`).join("");
     document.getElementById("users").innerHTML = users.slice(0, 20).map(user => `<tr><td>${user.name}</td><td>${user.email}</td><td>${user.role}</td></tr>`).join("");
     document.getElementById("books").innerHTML = books.map(book => `<tr><td>${escapeHtml(book.title)}</td><td>${escapeHtml(book.author)}</td><td>${book.price} جنيه</td><td><button class="delete-resource" data-url="/api/admin/books/${book._id}" data-label="الكتاب">حذف</button></td></tr>`).join("");
     document.getElementById("series").innerHTML = series.map(item => `<tr><td>${escapeHtml(item.name)}</td><td>${escapeHtml(item.description || "-")}</td><td><button class="delete-resource" data-url="/api/admin/series/${item._id}" data-label="السلسلة">حذف</button></td></tr>`).join("");
@@ -67,5 +67,20 @@ submitForm(document.getElementById("couponForm"), "/api/admin/coupons");
 document.addEventListener("click", event => {
     const button = event.target.closest(".delete-resource");
     if (button) deleteResource(button.dataset.url, button.dataset.label);
+    const confirmButton = event.target.closest(".confirm-payment");
+    if (confirmButton) confirmPayment(confirmButton);
 });
+
+async function confirmPayment(button) {
+    if (!window.confirm("تأكيد استلام التحويل وفتح الكتاب للمستخدم؟")) return;
+    button.disabled = true;
+    try {
+        await request(`/api/admin/orders/${button.dataset.id}/confirm`, { method: "POST", body: "{}" });
+        showMessage("تم تأكيد الدفع وفتح الكتاب للمستخدم");
+        await loadDashboard();
+    } catch (error) {
+        button.disabled = false;
+        showMessage(error.message || "تعذر تأكيد الدفع", true);
+    }
+}
 loadDashboard().catch(error => showMessage(error.message || "تعذر تحميل لوحة الإدارة", true));

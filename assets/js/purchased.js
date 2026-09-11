@@ -37,6 +37,8 @@ async function loadPurchasedBooks() {
     }
 
     try {
+        const paymentsResponse = await fetch("/api/payments/mine");
+        const payments = paymentsResponse.ok ? await paymentsResponse.json() : [];
         const response = await fetch("/api/books");
         if (!response.ok) throw new Error("تعذر تحميل الكتب");
         const books = await response.json();
@@ -47,13 +49,23 @@ async function loadPurchasedBooks() {
             return purchase.purchased ? { book, purchase } : null;
         }));
         const ownedBooks = checks.filter(Boolean);
-        purchasedStatus.hidden = true;
+        const latestPayment = payments[0];
+        purchasedStatus.hidden = false;
         purchasedSummary.textContent = `${ownedBooks.length} ${ownedBooks.length === 1 ? "كتاب" : "كتب"}`;
         if (!ownedBooks.length) {
+            if (latestPayment?.status === "pending") {
+                purchasedStatus.textContent = "طلبك قيد المراجعة. سيتم فتح الكتاب خلال نصف ساعة إلى ساعة، وللتأخير تواصل مع الدعم على 01016355675.";
+            }
             showEmpty("لم تشترِ أي كتاب بعد", "اكتشف الكتب", "index.html");
             return;
         }
         ownedBooks.forEach(({ book, purchase }) => renderBook(book, purchase));
+        if (latestPayment?.status === "paid") {
+            purchasedStatus.textContent = "ألف مبروك يا بشمهندس، تم تأكيد الدفع وفتح الكتاب لك.";
+            purchasedStatus.className = "detail-status success";
+        } else {
+            purchasedStatus.hidden = true;
+        }
     } catch (error) {
         purchasedStatus.textContent = error.message || "تعذر تحميل كتبك المشتراة.";
         purchasedStatus.className = "detail-status error";

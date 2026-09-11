@@ -224,6 +224,13 @@ body.dark-mode .welcome { background: linear-gradient(120deg, #29453a, #3d3b2f);
 .cart-checkout { position: sticky; top: 20px; display: grid; gap: 12px; padding: 20px; }
 .cart-total { color: var(--primary); font-size: 24px; }
 .cart-checkout .btn { width: 100%; }
+.manual-payment-panel { max-width: 640px; margin: 24px auto 0; padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+.manual-payment-panel h2 { margin: 8px 0; }
+.payment-phone { display: inline-block; color: var(--accent); font-size: 28px; font-weight: 700; direction: ltr; }
+.manual-payment-panel label { display: block; margin: 18px 0 6px; font-weight: 700; }
+.manual-payment-panel input[type="file"] { display: block; width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; box-sizing: border-box; }
+.receipt-thumb { width: 64px; height: 64px; object-fit: cover; border-radius: 5px; border: 1px solid var(--border); }
+.confirm-payment { width: auto; margin: 0; padding: 8px 12px; }
 .cart-empty { padding: 40px 20px; text-align: center; }
 .cart-empty strong { font-family: Georgia, serif; font-size: 23px; font-weight: 400; }
 .cart-empty p { margin: 8px 0 20px; color: var(--muted); font-size: 13px; }

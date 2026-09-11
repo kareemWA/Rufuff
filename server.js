@@ -17,8 +17,6 @@ const storagePath = path.join(__dirname, "storage.json");
 const PORT = Number(process.env.PORT || 3000);
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/myapp";
 const DEFAULT_DISCOUNT_PERCENT = 65;
-const PAYMOB_API_URL = "https://accept.paymob.com/api";
-const DEFAULT_PAYMOB_IFRAME_ID = "974449";
 const SESSION_COOKIE = "book_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 const SESSION_SECRET = process.env.SESSION_SECRET || (process.env.NODE_ENV === "production" ? "" : crypto.randomBytes(32).toString("hex"));
@@ -58,7 +56,8 @@ const Purchase = mongoose.model("Purchase", purchaseSchema);
 const paymentSchema = new mongoose.Schema({
     userEmail: { type: String, required: true },
     bookIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Book", required: true }],
-    paymobOrderId: { type: Number, required: true, unique: true },
+    receiptImage: { type: String, required: true },
+    orderNumber: { type: Number, unique: true, default: () => Date.now() + Math.floor(Math.random() * 100000) },
     amountCents: { type: Number, required: true },
     status: { type: String, enum: ["pending", "paid", "failed"], default: "pending" }
 }, { timestamps: true });
@@ -70,7 +69,7 @@ const commentSchema = new mongoose.Schema({
     bookId: { type: mongoose.Schema.Types.ObjectId, ref: "Book", required: true },
     userEmail: { type: String, required: true },
     userName: { type: String, required: true },
-    
+
     rating: { type: Number, required: true, min: 1, max: 5 },
     text: { type: String, required: true, trim: true, maxlength: 1000 }
 }, { timestamps: true });
@@ -111,10 +110,6 @@ function applyBookDiscount(book) {
     return { ...book, originalPrice, discountPercent, price };
 }
 
-function paymobConfigured() {
-    return Boolean(process.env.PAYMOB_API_KEY && process.env.PAYMOB_INTEGRATION_ID);
-}
-
 function createSessionToken(email) {
     const payload = Buffer.from(JSON.stringify({ email, expiresAt: Date.now() + SESSION_TTL_SECONDS * 1000 })).toString("base64url");
     const signature = crypto.createHmac("sha256", SESSION_SECRET).update(payload).digest("base64url");
@@ -152,37 +147,10 @@ function clearSessionCookie(res) {
     res.setHeader("Set-Cookie", `${SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secure}`);
 }
 
-async function paymobRequest(pathname, body) {
-    const response = await fetch(`${PAYMOB_API_URL}${pathname}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
-    });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.detail || result.message || "تعذر الاتصال ببوابة الدفع");
-    return result;
-}
-
-function isValidPaymobCallback(query) {
-    const secret = process.env.PAYMOB_HMAC_SECRET;
-    if (!secret || !query.hmac) return false;
-
-    const values = [
-        query.amount_cents, query.created_at, query.currency, query.error_occured,
-        query.has_parent_transaction, query.id, query.integration_id, query.is_3d_secure,
-        query.is_auth, query.is_capture, query.is_refunded, query.is_standalone_payment,
-        query.is_voided, query.order, query.owner, query.pending, query.source_data_pan,
-        query.source_data_sub_type, query.source_data_type, query.success
-    ].map(value => value ?? "").join("");
-    const expected = crypto.createHmac("sha512", secret).update(values).digest("hex");
-    return query.hmac.length === expected.length
-        && crypto.timingSafeEqual(Buffer.from(query.hmac), Buffer.from(expected));
-}
-
 async function createBooksCollection() {
     await Book.createCollection();
     await Book.bulkWrite([
-                
+
     ]);
     console.log("MongoDB collection ready: books");
 }
@@ -372,13 +340,14 @@ app.get("/api/admin/stats", requireAdmin, async (req, res) => {
 
 app.get("/api/admin/orders", requireAdmin, async (req, res) => {
     try {
-        const payments = await Payment.find().sort({ createdAt: -1 }).limit(100).lean();
+        const payments = await Payment.find().sort({ createdAt: -1 }).limit(100).populate("bookIds", "title price originalPrice discountPercent").lean();
         const emails = [...new Set(payments.map(payment => payment.userEmail))];
         const users = await User.find({ email: { $in: emails } }).select("email").lean();
         const usersByEmail = new Map(users.map(user => [user.email, user]));
         res.json(payments.map(payment => ({
             ...payment,
             userId: usersByEmail.get(payment.userEmail) || { email: payment.userEmail },
+            books: payment.bookIds,
             total: Number((payment.amountCents / 100).toFixed(2)),
             paymentStatus: payment.status
         })));
@@ -515,95 +484,60 @@ app.post("/api/books/:bookId/comments", async (req, res) => {
 app.post("/api/purchases", async (req, res) => {
     try {
         const userEmail = getSessionEmail(req);
-        const { bookIds } = req.body;
+        const { bookIds, receiptImage } = req.body;
         if (!userEmail) return res.status(401).send("يجب تسجيل الدخول أولًا");
         if (!Array.isArray(bookIds) || !bookIds.length) return res.status(400).send("السلة فارغة");
+        if (typeof receiptImage !== "string" || !/^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/i.test(receiptImage)) {
+            return res.status(400).send("أرفق صورة إيصال التحويل");
+        }
+        if (receiptImage.length > 10 * 1024 * 1024) return res.status(413).send("حجم الإيصال كبير جدًا");
 
-        const books = await Book.find({ _id: { $in: bookIds } }).select("_id").lean();
+        const books = await Book.find({ _id: { $in: bookIds } }).lean();
         if (books.length !== new Set(bookIds.map(String)).size) return res.status(404).send("أحد الكتب غير موجود");
+        const pricedBooks = books.map(applyBookDiscount);
+        const amountCents = pricedBooks.reduce((sum, book) => sum + Math.round(book.price * 100), 0);
 
-        await Purchase.bulkWrite(books.map(book => ({
+        const alreadyPending = await Payment.exists({ userEmail, bookIds: { $all: bookIds }, status: "pending" });
+        if (alreadyPending) return res.status(409).send("لديك طلب قيد المراجعة بالفعل");
+        await Payment.create({ userEmail, bookIds: books.map(book => book._id), receiptImage, amountCents });
+        await Library.updateOne({ userEmail }, { $set: { cartBookIds: [] } });
+
+        res.status(201).json({ pending: true });
+    } catch (error) {
+        res.status(500).send("تعذر إرسال طلب الدفع للمراجعة");
+    }
+});
+
+app.get("/api/payments/mine", requireUser, async (req, res) => {
+    try {
+        const payments = await Payment.find({ userEmail: req.currentUser.email })
+            .sort({ createdAt: -1 }).limit(20).populate("bookIds", "title").lean();
+        res.json(payments.map(payment => ({
+            id: payment._id,
+            status: payment.status,
+            total: Number((payment.amountCents / 100).toFixed(2)),
+            books: payment.bookIds.map(book => book.title),
+            createdAt: payment.createdAt
+        })));
+    } catch (error) {
+        res.status(500).send("تعذر تحميل حالة طلباتك");
+    }
+});
+
+app.post("/api/admin/orders/:orderId/confirm", requireAdmin, async (req, res) => {
+    try {
+        const payment = await Payment.findOne({ _id: req.params.orderId, status: "pending" });
+        if (!payment) return res.status(404).send("طلب الدفع غير موجود أو تم اعتماده بالفعل");
+        await Purchase.bulkWrite(payment.bookIds.map(bookId => ({
             updateOne: {
-                filter: { userEmail, bookId: book._id },
-                update: { userEmail, bookId: book._id, status: "paid" },
+                filter: { userEmail: payment.userEmail, bookId },
+                update: { userEmail: payment.userEmail, bookId, status: "paid" },
                 upsert: true
             }
         })));
-        await Library.updateOne({ userEmail }, { $set: { cartBookIds: [] } });
-
-        res.json({ purchased: true });
-    } catch (error) {
-        res.status(500).send("تعذر إتمام الشراء التجريبي");
-    }
-});
-
-app.post("/api/payments/paymob", async (req, res) => {
-    try {
-        if (!paymobConfigured()) return res.status(503).send("بوابة Paymob غير مهيأة. أضف PAYMOB_API_KEY وPAYMOB_INTEGRATION_ID في ملف .env ثم أعد تشغيل الخادم.");
-
-        const userEmail = getSessionEmail(req);
-        const { bookIds } = req.body;
-        if (!userEmail) return res.status(401).send("يجب تسجيل الدخول أولًا");
-        if (!Array.isArray(bookIds) || !bookIds.length) return res.status(400).send("السلة فارغة");
-
-        const user = await User.findOne({ email: userEmail }).lean();
-        if (!user) return res.status(401).send("يجب تسجيل الدخول أولًا");
-
-        const books = await Book.find({ _id: { $in: bookIds } }).lean();
-        if (books.length !== bookIds.length) return res.status(404).send("أحد الكتب غير موجود");
-
-        const pricedBooks = books.map(applyBookDiscount);
-        const amountCents = pricedBooks.reduce((sum, book) => sum + Math.round(book.price * 100), 0);
-        const auth = await paymobRequest("/auth/tokens", { api_key: process.env.PAYMOB_API_KEY });
-        const order = await paymobRequest("/ecommerce/orders", {
-            auth_token: auth.token,
-            delivery_needed: false,
-            amount_cents: amountCents,
-            currency: "EGP",
-            items: pricedBooks.map(book => ({ name: book.title, amount_cents: Math.round(book.price * 100), quantity: 1 }))
-        });
-
-        await Payment.create({ userEmail, bookIds, paymobOrderId: order.id, amountCents });
-        const paymentKey = await paymobRequest("/acceptance/payment_keys", {
-            auth_token: auth.token,
-            amount_cents: amountCents,
-            expiration: 3600,
-            order_id: order.id,
-            billing_data: {
-                apartment: "NA", email: user.email, floor: "NA", first_name: user.name || "Customer",
-                street: "NA", building: "NA", phone_number: user.phone || "NA", shipping_method: "NA",
-                postal_code: "NA", city: "NA", country: "EG", last_name: "Customer", state: "NA"
-            },
-            currency: "EGP",
-            integration_id: Number(process.env.PAYMOB_INTEGRATION_ID)
-        });
-
-        const iframeId = process.env.PAYMOB_IFRAME_ID || DEFAULT_PAYMOB_IFRAME_ID;
-        res.json({ iframeUrl: `https://accept.paymob.com/api/acceptance/iframes/${iframeId}?payment_token=${paymentKey.token}` });
-    } catch (error) {
-        console.error("Paymob payment error:", error.message);
-        res.status(500).send(error.message || "تعذر بدء الدفع");
-    }
-});
-
-app.get("/api/payments/paymob/callback", async (req, res) => {
-    try {
-        if (!isValidPaymobCallback(req.query)) return res.status(403).send("توقيع الدفع غير صالح");
-        const isSuccess = req.query.success === "true";
-        const orderId = Number(req.query.order);
-        const payment = await Payment.findOne({ paymobOrderId: orderId });
-        if (!payment) return res.status(404).send("طلب الدفع غير موجود");
-
-        if (isSuccess) {
-            await Purchase.bulkWrite(payment.bookIds.map(bookId => ({
-                updateOne: { filter: { userEmail: payment.userEmail, bookId }, update: { userEmail: payment.userEmail, bookId, status: "paid" }, upsert: true }
-            })));
-            payment.status = "paid";
-        } else {
-            payment.status = "failed";
-        }
+        payment.status = "paid";
         await payment.save();
-        res.redirect(`/cart.html?payment=${payment.status}`);
+        res.json({ confirmed: true });
     } catch (error) {
         res.status(500).send("تعذر تأكيد الدفع");
     }
@@ -778,6 +712,7 @@ async function connectDatabase() {
             maxIdleTimeMS: 30000
         }).then(async () => {
             console.log("MongoDB connected: myapp");
+            await Payment.collection.dropIndex("paymobOrderId_1").catch(() => {});
 
             const configuredAdminEmail = normalizeEmail(process.env.ADMIN_EMAIL);
             if (configuredAdminEmail) {
