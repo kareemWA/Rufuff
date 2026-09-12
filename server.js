@@ -33,7 +33,7 @@ const bookSchema = new mongoose.Schema({
     title: { type: String, required: true, unique: true },
     author: { type: String, required: true },
     category: { type: String, enum: ["برمجة وتطوير", "ذكاء اصطناعي", "أمن المعلومات", "علوم البيانات"], required: true },
-    price: { type: Number, required: true },
+    price: { type: Number, required: true, min: 0 },
     originalPrice: { type: Number },
     discountPercent: { type: Number, min: 0, max: 90, default: DEFAULT_DISCOUNT_PERCENT },
     seriesId: { type: mongoose.Schema.Types.ObjectId, ref: "Series", default: null },
@@ -109,7 +109,7 @@ const Coupon = mongoose.model("Coupon", couponSchema);
 function applyBookDiscount(book) {
     const originalPrice = Number(book.originalPrice || book.price);
     const discountPercent = Math.min(90, Math.max(0, Number(book.discountPercent ?? 0)));
-    const price = Math.round(originalPrice * (100 - discountPercent) / 100);
+    const price = Math.round(originalPrice * (100 - discountPercent)) / 100;
     return { ...book, originalPrice, discountPercent, price };
 }
 
@@ -444,8 +444,13 @@ app.delete("/api/admin/series/:seriesId", requireAdmin, async (req, res) => {
 
 app.post("/api/admin/books", requireAdmin, async (req, res) => {
     try {
-        const { title, author, category, price, originalPrice, discountPercent, cover, file, description, seriesId } = req.body;
-        const book = await Book.create({ title, author, category, price: Number(price), originalPrice: Number(originalPrice || price), discountPercent: Number(discountPercent || 0), image: cover, pdfFile: file || null, description, seriesId: seriesId || null });
+        const { title, author, category, price, discountPercent, cover, file, description, seriesId } = req.body;
+        const basePrice = Number(price);
+        const discount = Math.min(90, Math.max(0, Number(discountPercent || 0)));
+        if (!Number.isFinite(basePrice) || basePrice < 0) return res.status(400).send("السعر يجب أن يكون صفرًا أو أكبر");
+        if (!Number.isFinite(discount)) return res.status(400).send("نسبة الخصم غير صحيحة");
+        const finalPrice = Math.round(basePrice * (100 - discount) / 100 * 100) / 100;
+        const book = await Book.create({ title, author, category, price: finalPrice, originalPrice: basePrice, discountPercent: discount, image: cover, pdfFile: file || null, description, seriesId: seriesId || null });
         res.status(201).json(book);
     } catch (error) {
         res.status(400).send("تعذر حفظ الكتاب");
@@ -465,6 +470,26 @@ app.post("/api/admin/coupons", requireAdmin, async (req, res) => {
         res.status(201).json(await Coupon.create(req.body));
     } catch (error) {
         res.status(400).send("تعذر حفظ الكوبون");
+    }
+});
+
+app.post("/api/coupons/validate", async (req, res) => {
+    try {
+        const code = String(req.body.code || "").trim().toUpperCase();
+        const subtotal = Number(req.body.subtotal);
+        if (!code) return res.status(400).send("اكتب كود الخصم أولًا");
+        if (!Number.isFinite(subtotal) || subtotal < 0) return res.status(400).send("إجمالي الطلب غير صحيح");
+
+        const coupon = await Coupon.findOne({ code }).lean();
+        if (!coupon) return res.status(404).send("كود الخصم غير صحيح");
+        if (subtotal < Number(coupon.minPurchase || 0)) return res.status(400).send("الطلب لا يحقق الحد الأدنى للكوبون");
+
+        const total = coupon.type === "percentage"
+            ? Math.max(0, subtotal * (100 - Math.min(100, Number(coupon.value))) / 100)
+            : Math.max(0, subtotal - Number(coupon.value));
+        res.json({ code, subtotal, total: Number(total.toFixed(2)), discount: Number((subtotal - total).toFixed(2)) });
+    } catch (error) {
+        res.status(500).send("تعذر التحقق من الكوبون");
     }
 });
 
@@ -517,10 +542,6 @@ app.post("/api/purchases", async (req, res) => {
         const { bookIds, receiptImage } = req.body;
         if (!userEmail) return res.status(401).send("يجب تسجيل الدخول أولًا");
         if (!Array.isArray(bookIds) || !bookIds.length) return res.status(400).send("السلة فارغة");
-        if (typeof receiptImage !== "string" || !/^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/i.test(receiptImage)) {
-            return res.status(400).send("أرفق صورة إيصال التحويل");
-        }
-        if (receiptImage.length > 10 * 1024 * 1024) return res.status(413).send("حجم الإيصال كبير جدًا");
 
         const books = await Book.find({ _id: { $in: bookIds } }).lean();
         if (books.length !== new Set(bookIds.map(String)).size) return res.status(404).send("أحد الكتب غير موجود");
@@ -540,6 +561,21 @@ app.post("/api/purchases", async (req, res) => {
 
         const alreadyPending = await Payment.exists({ userEmail, bookIds: { $in: bookIds }, status: "pending" });
         if (alreadyPending) return res.status(409).send("لديك طلب قيد المراجعة بالفعل");
+        if (amountCents === 0) {
+            await Purchase.bulkWrite(books.map(book => ({
+                updateOne: {
+                    filter: { userEmail, bookId: book._id },
+                    update: { userEmail, bookId: book._id, status: "paid" },
+                    upsert: true
+                }
+            })));
+            await Library.updateOne({ userEmail }, { $set: { cartBookIds: [] } });
+            return res.status(201).json({ pending: false, paid: true, bookIds: books.map(book => String(book._id)) });
+        }
+        if (typeof receiptImage !== "string" || !/^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/i.test(receiptImage)) {
+            return res.status(400).send("أرفق صورة إيصال التحويل");
+        }
+        if (receiptImage.length > 10 * 1024 * 1024) return res.status(413).send("حجم الإيصال كبير جدًا");
         const payment = await Payment.create({ userEmail, bookIds: books.map(book => book._id), receiptImage, amountCents });
         await Library.updateOne({ userEmail }, { $set: { cartBookIds: [] } });
 
