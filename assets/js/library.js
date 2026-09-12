@@ -90,6 +90,7 @@
         if (!email) return;
         localStorage.removeItem(storageKey("bookCart", email));
         localStorage.removeItem(storageKey("favoriteBooks", email));
+        localStorage.removeItem(storageKey("paymentState", email));
     }
 
     async function load(user) {

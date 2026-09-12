@@ -147,7 +147,7 @@ body.dark-mode .login-box input{
 
     <p>سجل الدخول إلى حسابك</p>
 
-    <input id="email" type="email" placeholder="البريد الإلكتروني">
+    <input id="phone" type="tel" inputmode="numeric" maxlength="11" placeholder="رقم الهاتف (11 رقمًا)">
 
     <input id="password" type="password" placeholder="كلمة المرور">
 
@@ -167,12 +167,12 @@ body.dark-mode .login-box input{
 <script>
 async function login() {
 
-    const email = document.getElementById("email").value;
+    const phone = document.getElementById("phone").value.replace(/\D/g, "");
     const pass = document.getElementById("password").value;
     const message = document.getElementById("formMessage");
 
-    if (!email.trim() || !pass.trim()) {
-        message.textContent = "من فضلك اكتب البريد وكلمة المرور.";
+    if (!/^\d{11}$/.test(phone) || !pass.trim()) {
+        message.textContent = "اكتب رقم هاتف صحيحًا من 11 رقمًا وكلمة المرور.";
         message.className = "form-message error";
         return;
     }
@@ -184,7 +184,7 @@ async function login() {
         const response = await fetch("/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, pass })
+            body: JSON.stringify({ phone, pass })
         });
         if (!response.ok) throw new Error(await response.text());
 

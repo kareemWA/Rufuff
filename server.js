@@ -161,8 +161,8 @@ async function createBooksCollection() {
 const userSchema = new mongoose.Schema({
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
+    phone: { type: String, unique: true, sparse: true },
     pass: { type: String, required: true },
-    phone: String,
     photo: String,
     role: { type: String, enum: ["user", "admin"], default: "user" }
 }, { timestamps: true });
@@ -177,6 +177,14 @@ function publicUser(user) {
 
 function normalizeEmail(value) {
     return String(value || "").trim().toLowerCase();
+}
+
+function normalizePhone(value) {
+    return String(value || "").replace(/\D/g, "");
+}
+
+function isValidPhone(value) {
+    return /^\d{11}$/.test(value);
 }
 
 function isConfiguredAdminEmail(email) {
@@ -319,7 +327,7 @@ app.put("/api/library", requireUser, async (req, res) => {
 
 app.get("/api/books", async (req, res) => {
     try {
-        const books = await Book.find({ deletedAt: null }).sort({ createdAt: 1 }).lean();
+        const books = await Book.find({ deletedAt: null }).sort({ createdAt: -1 }).lean();
         res.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
         res.json(books.map(applyBookDiscount));
     } catch (error) {
@@ -701,19 +709,20 @@ app.get("/api/books/:bookId/access", async (req, res) => {
 app.post("/register", async (req, res) => {
     try {
         const name = String(req.body.name || "").trim();
-        const email = normalizeEmail(req.body.email);
+        const phone = normalizePhone(req.body.phone);
         const pass = String(req.body.pass || "");
-        if (!name || !email || pass.length < 8) return res.status(400).send("الاسم والبريد وكلمة مرور من 8 أحرف مطلوبة");
+        if (!name || !isValidPhone(phone) || pass.length < 8) return res.status(400).send("الاسم ورقم هاتف من 11 رقمًا وكلمة مرور من 8 أحرف مطلوبة");
 
-        const existingUser = await User.findOne({ email });
-        if (existingUser) return res.status(400).send("البريد الإلكتروني مستخدم بالفعل");
+        const existingUser = await User.findOne({ phone });
+        if (existingUser) return res.status(400).send("رقم الهاتف مستخدم بالفعل");
 
-        const role = isConfiguredAdminEmail(email) ? "admin" : "user";
+        const email = `${phone}@phone.rufuff.local`;
         await User.create({
             name,
+            phone,
             email,
             pass: await bcrypt.hash(pass, 12),
-            role
+            role: "user"
         });
 
         res.send("تم استلام البيانات بنجاح");
@@ -724,8 +733,10 @@ app.post("/register", async (req, res) => {
 
 app.post("/login", async (req, res) => {
     try {
-        const email = normalizeEmail(req.body.email);
-        const user = await User.findOne({ email });
+        const phone = normalizePhone(req.body.phone);
+        const user = isValidPhone(phone)
+            ? await User.findOne({ phone })
+            : await User.findOne({ email: normalizeEmail(req.body.phone) });
         const submittedPass = String(req.body.pass || "");
         const validPassword = user && (await bcrypt.compare(submittedPass, user.pass).catch(() => false)
             || user.pass === submittedPass);
@@ -743,7 +754,7 @@ app.post("/login", async (req, res) => {
             setSessionCookie(res, user.email);
             return res.json(publicUser(user));
         }
-        return res.status(401).send("البريد الإلكتروني أو كلمة المرور غير صحيحة");
+        return res.status(401).send("رقم الهاتف أو كلمة المرور غير صحيحة");
     } catch (error) {
         res.status(500).send("تعذر الاتصال بقاعدة البيانات");
     }
@@ -760,15 +771,14 @@ async function updateUser(req, res) {
         if (!userEmail) return res.status(401).send("يجب تسجيل الدخول أولًا");
         const updates = {
             name: String(req.body.name || "").trim(),
-            email: String(req.body.email || "").trim().toLowerCase(),
-            phone: req.body.phone,
+            phone: normalizePhone(req.body.phone),
             photo: req.body.photo || req.body.avatar
         };
-        if (!updates.name || !updates.email) return res.status(400).send("الاسم والبريد مطلوبان");
+        if (!updates.name || !isValidPhone(updates.phone)) return res.status(400).send("الاسم ورقم هاتف من 11 رقمًا مطلوبان");
         if (req.body.pass) updates.pass = await bcrypt.hash(String(req.body.pass), 12);
 
         const user = await User.findOneAndUpdate(
-            { email: userEmail },
+            { $or: [{ email: userEmail }, { phone: userEmail }] },
             updates,
             { new: true, runValidators: true }
         ).lean();
@@ -784,6 +794,23 @@ async function updateUser(req, res) {
 app.put("/update-user", updateUser);
 
 app.post("/update", updateUser);
+
+app.delete("/api/me", requireUser, async (req, res) => {
+    try {
+        const email = req.currentUser.email;
+        await Promise.all([
+            User.deleteOne({ _id: req.currentUser._id }),
+            Library.deleteOne({ userEmail: email }),
+            Purchase.deleteMany({ userEmail: email }),
+            Payment.deleteMany({ userEmail: email }),
+            Comment.deleteMany({ userEmail: email })
+        ]);
+        clearSessionCookie(res);
+        res.status(204).end();
+    } catch {
+        res.status(500).send("تعذر حذف الحساب");
+    }
+});
 
 async function ensureDefaultAdminUser() {
     const configuredAdminEmail = normalizeEmail(process.env.ADMIN_EMAIL);

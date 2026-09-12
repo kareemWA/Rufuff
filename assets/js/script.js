@@ -19,6 +19,14 @@ let cart = [];
 let favorites = [];
 let books = [];
 
+function sortBooksNewestFirst(items) {
+    return [...items].sort((left, right) => {
+        const leftDate = new Date(left.createdAt || 0).getTime();
+        const rightDate = new Date(right.createdAt || 0).getTime();
+        return rightDate - leftDate;
+    });
+}
+
 function redirectGuest(event) {
     if (currentUser?.email) return false;
     event.preventDefault();
@@ -213,7 +221,7 @@ async function loadBooks() {
     try {
         const cachedBooks = JSON.parse(localStorage.getItem("booksCache") || "null");
         if (Array.isArray(cachedBooks) && cachedBooks.length) {
-            books = cachedBooks;
+            books = sortBooksNewestFirst(cachedBooks);
             if (booksStatus) booksStatus.remove();
             renderBooks();
         }
@@ -224,7 +232,7 @@ async function loadBooks() {
     try {
         const response = await fetch("/api/books");
         if (!response.ok) throw new Error("تعذر تحميل الكتب");
-        books = await response.json();
+        books = sortBooksNewestFirst(await response.json());
         localStorage.setItem("booksCache", JSON.stringify(books));
         if (booksStatus) booksStatus.remove();
         renderBooks();
@@ -293,13 +301,16 @@ function closeMenu() {
     nav.classList.remove("show");
     navBottom.classList.remove("show");
     document.body.classList.remove("menu-open");
+    menuButton?.setAttribute("aria-expanded", "false");
 }
 
 if (menuButton && nav && navBottom) {
+    menuButton.setAttribute("aria-expanded", "false");
     menuButton.addEventListener("click", () => {
         const isOpen = nav.classList.toggle("show");
         navBottom.classList.toggle("show", isOpen);
         document.body.classList.toggle("menu-open", isOpen);
+        menuButton.setAttribute("aria-expanded", String(isOpen));
     });
 
     document.addEventListener("click", event => {

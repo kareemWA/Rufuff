@@ -148,7 +148,7 @@ body.dark-mode .login-box input{
 
     <p>انشئ حساب مجاني</p>
     <input id="name" type="text" placeholder="اسم المستخدم"> 
-    <input id="email" type="email" placeholder="البريد الإلكتروني">
+    <input id="phone" type="tel" inputmode="numeric" maxlength="11" placeholder="رقم الهاتف (11 رقمًا)">
 
     <input id="password" type="password" placeholder="كلمة المرور">
 
@@ -168,13 +168,13 @@ body.dark-mode .login-box input{
 <script>
 async function signup (){
     const name = document.getElementById("name").value;
-    const email = document.getElementById("email").value;
+    const phone = document.getElementById("phone").value.replace(/\D/g, "");
     const pass = document.getElementById("password").value;
     const message = document.getElementById("formMessage");
     const button = document.getElementById("signupButton");
 
-    if (!name.trim() || !email.trim() || !pass.trim()) {
-        message.textContent = "من فضلك املأ كل البيانات.";
+    if (!name.trim() || !/^\d{11}$/.test(phone) || !pass.trim()) {
+        message.textContent = "اكتب الاسم ورقم هاتف صحيحًا من 11 رقمًا وكلمة المرور.";
         message.className = "form-message error";
         return;
     }
@@ -187,7 +187,7 @@ async function signup (){
         const response = await fetch("/register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name, email, pass })
+            body: JSON.stringify({ name, phone, pass })
         });
         const data = await response.text();
         if (!response.ok) throw new Error(data);

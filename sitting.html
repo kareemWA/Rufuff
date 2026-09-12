@@ -173,18 +173,15 @@ body .dark-mode.back{
             <input id="name">
         </div>
         <div class="email">
-            <a>email</a>
-            <input id = "email">
+            <a>رقم الهاتف</a>
+            <input id="phone" inputmode="numeric" maxlength="11" placeholder="11 رقمًا">
         </div>
         <div class="pass">
-            <a>password</a>
-            <input id="pass">
-        </div>
-        <div class="num-ph">
-            <a>phone</a>
-            <input id="phone">
+            <a>كلمة المرور الجديدة</a>
+            <input id="pass" type="password" autocomplete="new-password">
         </div>
         <button onclick="replaceData()">Save</button>
+        <button class="delete-account" type="button" onclick="deleteAccount()">حذف الحساب</button>
         <p id="formMessage" class="form-message" role="status" aria-live="polite"></p>
     </div>
     <footer class="site-footer">
@@ -194,7 +191,6 @@ body .dark-mode.back{
      
     <script >
     const nameInput = document.getElementById("name");
-    const emailInput = document.getElementById("email");
     const passInput = document.getElementById("pass");
     const phoneInput = document.getElementById("phone");
     const imageInput = document.getElementById("imageInput");
@@ -208,7 +204,7 @@ body .dark-mode.back{
             const response = await fetch("/api/me");
             if (!response.ok) return;
             const serverUser = await response.json();
-            if (!serverUser?.email) return;
+            if (!serverUser?.phone) return;
 
             user = serverUser;
             localStorage.setItem("currentUser", JSON.stringify(serverUser));
@@ -221,7 +217,6 @@ body .dark-mode.back{
     function renderProfile(profile) {
         if (!profile) return;
         if (profile.name) nameInput.value = profile.name;
-        if (profile.email) emailInput.value = profile.email;
         if (profile.pass) passInput.value = profile.pass;
         if (profile.phone) phoneInput.value = profile.phone;
         if (profile.avatar) photo.src = profile.avatar;
@@ -255,9 +250,8 @@ body .dark-mode.back{
         const updatedUser = {
             oldEmail: user.email,
             name: nameInput.value,
-            email: emailInput.value,
             pass: passInput.value,
-            phone: phoneInput.value,
+            phone: phoneInput.value.replace(/\D/g, ""),
             avatar: photo.src
         };
 
@@ -285,7 +279,25 @@ body .dark-mode.back{
 
     
     }
-   
+
+    async function deleteAccount() {
+        if (!window.confirm("سيتم حذف حسابك وكتبك وبياناتك نهائيًا. هل تريد المتابعة؟")) return;
+        const message = document.getElementById("formMessage");
+        try {
+            const response = await fetch("/api/me", { method: "DELETE" });
+            if (!response.ok) throw new Error(await response.text());
+            if (window.accountLibrary?.clearUserData) {
+                window.accountLibrary.clearUserData(user.phone);
+                window.accountLibrary.clearUserData(user.email);
+            }
+            localStorage.removeItem("paymentStatuses");
+            localStorage.removeItem("currentUser");
+            window.location.href = "signin.html";
+        } catch (error) {
+            message.textContent = error.message || "تعذر حذف الحساب.";
+            message.className = "form-message error";
+        }
+    }
 
     
 
