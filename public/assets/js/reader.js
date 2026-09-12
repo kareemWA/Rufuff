@@ -5,6 +5,12 @@ const readerDownload = document.getElementById("readerDownload");
 const readerFrameWrap = document.getElementById("readerFrameWrap");
 const readerFrame = document.getElementById("readerFrame");
 const bookId = new URLSearchParams(window.location.search).get("id");
+const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
+
+if (!currentUser?.email) {
+    const returnUrl = `${window.location.pathname}${window.location.search}`;
+    window.location.href = `logIn.html?return=${encodeURIComponent(returnUrl)}`;
+}
 
 function showError(message) {
     readerStatus.textContent = message;

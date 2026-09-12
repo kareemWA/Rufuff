@@ -822,7 +822,7 @@ app.delete("/api/me", requireUser, async (req, res) => {
 
 async function ensureDefaultAdminUser() {
     const configuredAdminEmail = normalizeEmail(process.env.ADMIN_EMAIL);
-    const adminPassword = String(process.env.ADMIN_PASSWORD || "Admin123456").trim();
+    const adminPassword = String(process.env.ADMIN_PASSWORD || "").trim();
     if (!configuredAdminEmail) return;
 
     const existingUser = await User.findOne({ email: configuredAdminEmail }).lean();

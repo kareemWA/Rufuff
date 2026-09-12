@@ -31,7 +31,8 @@ function redirectGuest(event) {
     if (currentUser?.email) return false;
     event.preventDefault();
     event.stopPropagation();
-    window.location.href = signupPage;
+    const returnUrl = `${window.location.pathname}${window.location.search}`;
+    window.location.href = `logIn.html?return=${encodeURIComponent(returnUrl)}`;
     return true;
 }
 
@@ -131,11 +132,11 @@ async function loadBook() {
 
 buyButton.addEventListener("click", event => {
     const isFree = Number(book?.price) <= 0 && Boolean(book?.pdfFile);
+    if (redirectGuest(event)) return;
     if (isFree) {
         window.location.href = `reader.html?id=${encodeURIComponent(book._id)}`;
         return;
     }
-    if (redirectGuest(event)) return;
     if (purchased) {
         window.location.href = `reader.html?id=${encodeURIComponent(book._id)}`;
         return;

@@ -31,7 +31,8 @@ function redirectGuest(event) {
     if (currentUser?.email) return false;
     event.preventDefault();
     event.stopPropagation();
-    window.location.href = signupPage;
+    const returnUrl = `${window.location.pathname}${window.location.search}`;
+    window.location.href = `logIn.html?return=${encodeURIComponent(returnUrl)}`;
     return true;
 }
 
@@ -109,13 +110,14 @@ function createBookCard(book) {
                     : '<button class="btn buy-book" type="button">أضف للسلة</button>'}
             </div>
             <button class="favorite-toggle" type="button" aria-label="إضافة ${book.title} للمفضلة">${favorites.some(item => item._id === book._id) ? "♥" : "♡"}</button>
-            <a class="book-details-link" href="book-detail.html?id=${book._id}">التفاصل</a>
+            <a class="book-details-link" href="book-detail.html?id=${book._id}">التفاصيل</a>
             <p class="book-message" role="status" aria-live="polite"></p>
         </div>`;
 
     const buyControl = article.querySelector(".buy-book");
-    if (buyControl.tagName !== "A") buyControl.addEventListener("click", event => {
+    buyControl.addEventListener("click", event => {
         if (redirectGuest(event)) return;
+        if (buyControl.tagName === "A") return;
         const message = article.querySelector(".book-message");
         if (!cart.some(item => item._id === book._id)) {
             cart.push(book);
@@ -127,6 +129,8 @@ function createBookCard(book) {
             message.className = "book-message";
         }
     });
+
+    article.querySelector(".book-details-link").addEventListener("click", redirectGuest);
 
     article.querySelector(".favorite-toggle").addEventListener("click", event => {
         if (redirectGuest(event)) return;
