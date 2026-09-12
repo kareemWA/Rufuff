@@ -255,7 +255,7 @@ app.disable("x-powered-by");
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(compression());
 app.use(express.static(__dirname));
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "20mb" }));
 
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -449,6 +449,10 @@ app.post("/api/admin/books", requireAdmin, async (req, res) => {
         const discount = Math.min(90, Math.max(0, Number(discountPercent || 0)));
         if (!Number.isFinite(basePrice) || basePrice < 0) return res.status(400).send("السعر يجب أن يكون صفرًا أو أكبر");
         if (!Number.isFinite(discount)) return res.status(400).send("نسبة الخصم غير صحيحة");
+        if (typeof cover !== "string" || !cover.trim()) return res.status(400).send("صورة الغلاف مطلوبة");
+        if (cover.startsWith("data:") && !/^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/i.test(cover)) return res.status(400).send("صيغة صورة الغلاف غير مدعومة");
+        if (typeof file === "string" && file.startsWith("data:") && !/^data:application\/pdf;base64,[A-Za-z0-9+/=]+$/i.test(file)) return res.status(400).send("صيغة ملف الكتاب غير مدعومة");
+        if (typeof file === "string" && file.length > 8 * 1024 * 1024) return res.status(413).send("ملف الكتاب كبير جدًا، الحد الأقصى 6 ميجابايت");
         const finalPrice = Math.round(basePrice * (100 - discount) / 100 * 100) / 100;
         const book = await Book.create({ title, author, category, price: finalPrice, originalPrice: basePrice, discountPercent: discount, image: cover, pdfFile: file || null, description, seriesId: seriesId || null });
         res.status(201).json(book);
@@ -667,6 +671,12 @@ app.get("/api/books/:bookId/access", async (req, res) => {
             if (!userEmail) return res.status(401).send("يجب تسجيل الدخول أولًا");
             const purchase = await Purchase.findOne({ userEmail, bookId: req.params.bookId, status: "paid" });
             if (!purchase) return res.status(403).send("يجب شراء الكتاب أولًا");
+        }
+        if (/^data:application\/pdf;base64,/i.test(book.pdfFile)) {
+            const pdfData = Buffer.from(book.pdfFile.split(",", 2)[1], "base64");
+            res.setHeader("Content-Type", "application/pdf");
+            if (req.query.download === "1") res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(`${book.title}.pdf`)}`);
+            return res.end(pdfData);
         }
         if (/^https?:\/\//i.test(book.pdfFile)) {
             const pdfResponse = await fetch(book.pdfFile);

@@ -53,6 +53,13 @@ async function submitForm(form, url) {
         event.preventDefault();
         try {
             const data = Object.fromEntries(new FormData(form));
+            if (form.id === "bookForm") {
+                data.cover = data.cover || await readFileAsDataUrl(data.coverFile, "صورة الغلاف", 2 * 1024 * 1024, /^image\/(png|jpe?g|webp)$/i);
+                data.file = data.file || await readFileAsDataUrl(data.fileUpload, "ملف الكتاب", 6 * 1024 * 1024, /^application\/pdf$/i);
+                delete data.coverFile;
+                delete data.fileUpload;
+                if (!data.cover) throw new Error("اختر صورة الغلاف أو اكتب رابطها");
+            }
             await request(url, { method: "POST", body: JSON.stringify(data) });
             form.reset();
             showMessage("تم الحفظ بنجاح");
@@ -60,6 +67,18 @@ async function submitForm(form, url) {
         } catch (error) {
             showMessage(error.message || "تعذر الحفظ", true);
         }
+    });
+}
+
+function readFileAsDataUrl(file, label, maxSize, typePattern) {
+    if (!file || !file.size) return Promise.resolve("");
+    if (file.size > maxSize) return Promise.reject(new Error(`${label} يجب ألا يتجاوز ${Math.round(maxSize / 1024 / 1024)} ميجابايت`));
+    if (!typePattern.test(file.type)) return Promise.reject(new Error(`${label} بصيغة غير مدعومة`));
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error(`تعذر قراءة ${label}`));
+        reader.readAsDataURL(file);
     });
 }
 
