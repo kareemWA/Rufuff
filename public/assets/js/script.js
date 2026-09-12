@@ -13,10 +13,19 @@ const nameElement = document.getElementById("naMe");
 const photo = document.getElementById("photo");
 
 const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
+const signupPage = "signin.html";
 let selectedCategory = "all";
 let cart = [];
 let favorites = [];
 let books = [];
+
+function redirectGuest(event) {
+    if (currentUser?.email) return false;
+    event.preventDefault();
+    event.stopPropagation();
+    window.location.href = signupPage;
+    return true;
+}
 
 async function refreshCurrentUserFromServer() {
     if (!currentUser?.email) return null;
@@ -52,6 +61,10 @@ if (logout) {
         event.preventDefault();
         logoutUser();
     });
+}
+
+if (photo) {
+    photo.closest(".acc")?.addEventListener("click", redirectGuest);
 }
 
 async function logoutUser() {
@@ -91,6 +104,7 @@ function createBookCard(book) {
         </div>`;
 
     article.querySelector(".buy-book").addEventListener("click", event => {
+        if (redirectGuest(event)) return;
         const message = article.querySelector(".book-message");
         if (!cart.some(item => item._id === book._id)) {
             cart.push(book);
@@ -104,6 +118,7 @@ function createBookCard(book) {
     });
 
     article.querySelector(".favorite-toggle").addEventListener("click", event => {
+        if (redirectGuest(event)) return;
         const isFavorite = favorites.some(item => item._id === book._id);
         favorites = isFavorite
             ? favorites.filter(item => item._id !== book._id)
@@ -289,6 +304,10 @@ if (menuButton && nav && navBottom) {
         if (!clickedInsideMenu) closeMenu();
     });
 }
+
+document.querySelectorAll(".list a, .list_bottom a, .book-details-link, #cartButton").forEach(element => {
+    element.addEventListener("click", redirectGuest);
+});
 
 if (title) title.addEventListener("click", () => window.location.reload());
 

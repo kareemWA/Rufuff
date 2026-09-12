@@ -18,6 +18,7 @@ const purchaseMessage = document.getElementById("purchaseMessage");
 const favoriteButton = document.getElementById("favoriteButton");
 const downloadButton = document.getElementById("downloadButton");
 const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
+const signupPage = "signin.html";
 const bookId = new URLSearchParams(window.location.search).get("id");
 let book;
 let purchased = false;
@@ -25,6 +26,14 @@ let pending = false;
 let accessUrl = "";
 let cart = [];
 let favorites = [];
+
+function redirectGuest(event) {
+    if (currentUser?.email) return false;
+    event.preventDefault();
+    event.stopPropagation();
+    window.location.href = signupPage;
+    return true;
+}
 
 function setText(element, value) {
     element.textContent = value || "";
@@ -93,7 +102,8 @@ function updatePurchaseButton() {
     if (purchased) downloadButton.href = `${accessUrl}?download=1`;
 }
 
-favoriteButton.addEventListener("click", () => {
+favoriteButton.addEventListener("click", event => {
+    if (redirectGuest(event)) return;
     const isFavorite = favorites.some(item => item._id === book._id);
     favorites = isFavorite
         ? favorites.filter(item => item._id !== book._id)
@@ -118,7 +128,8 @@ async function loadBook() {
     }
 }
 
-buyButton.addEventListener("click", () => {
+buyButton.addEventListener("click", event => {
+    if (redirectGuest(event)) return;
     if (purchased) {
         window.open(accessUrl, "_blank", "noopener");
         return;
