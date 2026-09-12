@@ -96,14 +96,17 @@ function createBookCard(book) {
             <p>${book.author}</p>
             <div class="price-box"><strong class="price">${book.price} جنيه</strong><del>${book.originalPrice || book.price} جنيه</del><span class="discount-badge">خصم ${book.discountPercent || 0}%</span></div>
             <div class="book-footer">
-                <button class="btn buy-book" type="button">أضف للسلة</button>
+                ${Number(book.price) <= 0 && book.pdfFile
+                    ? `<a class="btn buy-book" href="reader.html?id=${encodeURIComponent(book._id)}">اقرأ مجانًا</a>`
+                    : '<button class="btn buy-book" type="button">أضف للسلة</button>'}
             </div>
             <button class="favorite-toggle" type="button" aria-label="إضافة ${book.title} للمفضلة">${favorites.some(item => item._id === book._id) ? "♥" : "♡"}</button>
             <a class="book-details-link" href="book-detail.html?id=${book._id}">التفاصل</a>
             <p class="book-message" role="status" aria-live="polite"></p>
         </div>`;
 
-    article.querySelector(".buy-book").addEventListener("click", event => {
+    const buyControl = article.querySelector(".buy-book");
+    if (buyControl.tagName !== "A") buyControl.addEventListener("click", event => {
         if (redirectGuest(event)) return;
         const message = article.querySelector(".book-message");
         if (!cart.some(item => item._id === book._id)) {

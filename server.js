@@ -659,13 +659,15 @@ app.get("/api/purchases/:bookId", async (req, res) => {
 
 app.get("/api/books/:bookId/access", async (req, res) => {
     try {
-        const userEmail = getSessionEmail(req);
-        if (!userEmail) return res.status(401).send("يجب تسجيل الدخول أولًا");
-        const purchase = await Purchase.findOne({ userEmail, bookId: req.params.bookId, status: "paid" });
-        if (!purchase) return res.status(403).send("يجب شراء الكتاب أولًا");
-
         const book = await Book.findById(req.params.bookId).lean();
         if (!book || !book.pdfFile) return res.status(404).send("ملف PDF غير مرفوع لهذا الكتاب");
+        const freeBook = applyBookDiscount(book).price <= 0;
+        const userEmail = getSessionEmail(req);
+        if (!freeBook) {
+            if (!userEmail) return res.status(401).send("يجب تسجيل الدخول أولًا");
+            const purchase = await Purchase.findOne({ userEmail, bookId: req.params.bookId, status: "paid" });
+            if (!purchase) return res.status(403).send("يجب شراء الكتاب أولًا");
+        }
         if (/^https?:\/\//i.test(book.pdfFile)) {
             const pdfResponse = await fetch(book.pdfFile);
             if (!pdfResponse.ok || !pdfResponse.body) return res.status(502).send("تعذر جلب ملف PDF");

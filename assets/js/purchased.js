@@ -23,7 +23,7 @@ function renderBook(book, purchase) {
             <h2>${book.title}</h2>
             <p>${book.author}</p>
             ${book.pdfFile
-                ? `<div class="purchased-actions"><a class="btn" href="${accessUrl}" target="_blank">اقرأ الكتاب</a><a class="download-link" href="${accessUrl}&download=1" target="_blank">تحميل PDF</a></div>`
+                ? `<div class="purchased-actions"><a class="btn" href="reader.html?id=${encodeURIComponent(book._id)}">اقرأ الكتاب</a><a class="download-link" href="${accessUrl}&download=1" target="_blank">تحميل PDF</a></div>`
                 : '<p class="book-message">ملف القراءة غير مرفوع حاليًا.</p>'}
         </div>`;
     purchasedBooks.appendChild(article);
