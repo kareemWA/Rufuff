@@ -407,12 +407,20 @@ app.delete("/api/admin/books/:bookId", requireAdmin, async (req, res) => {
     try {
         const bookId = new mongoose.Types.ObjectId(req.params.bookId);
 
-        const deletedBook = await Book.findOneAndUpdate(
-            { _id: bookId, deletedAt: null },
-            { $set: { deletedAt: new Date() } },
-            { new: true }
-        );
+        const deletedBook = await Book.findOneAndDelete({ _id: bookId });
         if (!deletedBook) return res.status(404).send("الكتاب غير موجود أو محذوف بالفعل");
+
+        await Promise.all([
+            Library.updateMany(
+                { $or: [{ cartBookIds: bookId }, { favoriteBookIds: bookId }] },
+                { $pull: { cartBookIds: bookId, favoriteBookIds: bookId } }
+            ),
+            Purchase.deleteMany({ bookId }),
+            Payment.updateMany(
+                { bookIds: bookId },
+                { $pull: { bookIds: bookId } }
+            )
+        ]);
 
         res.status(204).end();
     } catch (error) {
