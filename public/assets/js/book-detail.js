@@ -132,7 +132,7 @@ async function loadBook() {
     }
 }
 
-buyButton.addEventListener("click", event => {
+buyButton.addEventListener("click", async event => {
     const isFree = Number(book?.price) <= 0 && Boolean(book?.pdfFile);
     if (redirectGuest(event)) return;
     if (isFree) {
@@ -145,9 +145,9 @@ buyButton.addEventListener("click", event => {
     }
     if (pending) return;
     if (!cart.some(item => item._id === book._id)) cart.push(book);
-    window.accountLibrary.save(currentUser, cart, favorites);
-    purchaseMessage.textContent = "أُضيف الكتاب إلى السلة.";
-    purchaseMessage.className = "book-message success";
+    const saved = await window.accountLibrary.save(currentUser, cart, favorites);
+    purchaseMessage.textContent = saved ? "أُضيف الكتاب إلى السلة." : "تعذر حفظ السلة. تحقق من اتصال الموقع.";
+    purchaseMessage.className = `book-message ${saved ? "success" : "error"}`;
 });
 
 commentForm.addEventListener("submit", async event => {
@@ -183,10 +183,13 @@ commentForm.addEventListener("submit", async event => {
 });
 
 async function initializeBookDetails() {
-    const library = await window.accountLibrary.load(currentUser);
+    const [library] = await Promise.all([
+        window.accountLibrary.load(currentUser),
+        loadBook()
+    ]);
     cart = library.cart;
     favorites = library.favorites;
-    await loadBook();
+    updateFavoriteButton();
 }
 
 initializeBookDetails().catch(error => {

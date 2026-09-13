@@ -270,7 +270,14 @@ async function loadBooks() {
 async function updateCart() {
     if (cartCount) cartCount.textContent = cart.length;
     if (currentUser?.email) {
-        await window.accountLibrary.save(currentUser, cart, favorites);
+        const saved = await window.accountLibrary.save(currentUser, cart, favorites);
+        if (!saved) {
+            const message = document.querySelector(".book-message");
+            if (message) {
+                message.textContent = "تعذر حفظ السلة. تحقق من اتصال الموقع.";
+                message.className = "book-message error";
+            }
+        }
     }
 }
 

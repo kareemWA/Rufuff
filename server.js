@@ -341,6 +341,7 @@ app.put("/api/library", requireUser, async (req, res) => {
         ).lean();
         res.json(library);
     } catch (error) {
+        console.error("Library save error:", error.message);
         res.status(400).send("تعذر حفظ مكتبتك");
     }
 });
@@ -616,6 +617,7 @@ app.get("/api/books/:bookId", async (req, res) => {
             ? comments.reduce((sum, comment) => sum + comment.rating, 0) / comments.length
             : 0;
 
+        res.set("Cache-Control", "no-store");
         res.json({ ...applyBookDiscount(book), comments, averageRating: Number(averageRating.toFixed(1)), reviewsCount: comments.length });
     } catch (error) {
         res.status(500).send("تعذر تحميل تفاصيل الكتاب");
@@ -1029,8 +1031,8 @@ async function connectDatabase() {
     if (!databasePromise) {
         databasePromise = mongoose.connect(MONGODB_URI, {
             serverSelectionTimeoutMS: 5000,
-            maxPoolSize: 50,
-            minPoolSize: 5,
+            maxPoolSize: 10,
+            minPoolSize: 0,
             maxIdleTimeMS: 30000
         }).then(async () => {
             console.log("MongoDB connected: myapp");
@@ -1048,6 +1050,9 @@ async function connectDatabase() {
             await ensureDefaultAdminUser();
             await ensureDefaultCategories();
             await createBooksCollection();
+        }).catch(error => {
+            databasePromise = null;
+            throw error;
         });
     }
     return databasePromise;
@@ -1068,5 +1073,6 @@ if (require.main === module) {
 }
 
 module.exports = { app, connectDatabase };
+
 
 

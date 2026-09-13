@@ -110,17 +110,15 @@
             const booksById = new Map(books.map(book => [String(book._id), book]));
             const accountCartBookIds = library.cartBookIds || [];
             const accountFavoriteBookIds = library.favoriteBookIds || [];
-            const hasLocalCart = localStorage.getItem(storageKey("bookCart", user.email)) !== null;
-            const hasLocalFavorites = localStorage.getItem(storageKey("favoriteBooks", user.email)) !== null;
-            const cartBookIds = hasLocalCart
-                ? [...new Set(localCart.map(book => book._id))]
-                : accountCartBookIds;
-            const favoriteBookIds = hasLocalFavorites
-                ? [...new Set(localFavorites.map(book => book._id))]
-                : accountFavoriteBookIds;
+            const cartBookIds = accountCartBookIds.length
+                ? accountCartBookIds
+                : [...new Set(localCart.map(book => book._id))];
+            const favoriteBookIds = accountFavoriteBookIds.length
+                ? accountFavoriteBookIds
+                : [...new Set(localFavorites.map(book => book._id))];
             const cart = cartBookIds.map(id => booksById.get(String(id))).filter(Boolean);
             const favorites = favoriteBookIds.map(id => booksById.get(String(id))).filter(Boolean);
-            if ((hasLocalCart || hasLocalFavorites) && (cart.length || favorites.length)) {
+            if ((!accountCartBookIds.length && localCart.length) || (!accountFavoriteBookIds.length && localFavorites.length)) {
                 await save(user, cart, favorites);
             }
             writeLocal("bookCart", cart, user.email);
@@ -150,8 +148,10 @@
                     body: JSON.stringify(payload)
                 });
                 if (!response.ok) throw new Error(await response.text());
+                return true;
             } catch (error) {
                 console.warn("تعذر حفظ مكتبتك", error);
+                return false;
             }
         });
         return saveQueue;
@@ -159,3 +159,4 @@
 
     window.accountLibrary = { load, save, clearLegacyLocalData, clearUserData, readPaymentState, savePaymentRequest, syncPaymentState, markPaymentRecord };
 })();
+
