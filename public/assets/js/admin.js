@@ -29,23 +29,23 @@ async function deleteResource(url, label) {
 }
 
 async function loadDashboard() {
-    const [stats, orders, users, books, series] = await Promise.all([
+    const [stats, orders, users, books, categories, coupons] = await Promise.all([
         request("/api/admin/stats"),
         request("/api/admin/orders"),
         request("/api/admin/users"),
         request("/api/admin/books"),
-        request("/api/admin/series")
+        request("/api/admin/categories"),
+        request("/api/admin/coupons")
     ]);
     document.getElementById("usersCount").textContent = stats.users;
     document.getElementById("booksCount").textContent = stats.books;
     document.getElementById("ordersCount").textContent = stats.orders;
     document.getElementById("revenue").textContent = `${stats.revenue} جنيه`;
-    const seriesOptions = `<option value="">بدون سلسلة</option>${series.map(item => `<option value="${item._id}">${escapeHtml(item.name)}</option>`).join("")}`;
-    document.getElementById("bookSeries").innerHTML = seriesOptions;
-    document.getElementById("orders").innerHTML = orders.slice(0, 20).map(order => `<tr><td>${escapeHtml(order.userId?.name || order.userId?.email || "-")}<br><small>${escapeHtml(order.userId?.email || "")}</small></td><td>${order.books.map(book => escapeHtml(book.title)).join("، ")}</td><td>${order.total} جنيه</td><td><div class="receipt-actions"><img class="receipt-thumb" src="${escapeHtml(order.receiptImage)}" alt="إيصال التحويل"><button class="view-receipt" type="button" data-receipt="${escapeHtml(order.receiptImage)}">عرض</button></div></td><td>${order.paymentStatus === "paid" ? "تم التأكيد" : order.paymentStatus === "failed" ? `مرفوض: ${escapeHtml(order.rejectionReason || "غير صحيح")}` : "قيد المراجعة"}</td><td>${order.paymentStatus === "pending" ? `<div class="payment-actions"><button class="confirm-payment" data-id="${order._id}">تأكيد الدفع</button><button class="reject-payment" data-id="${order._id}">رفض الدفع</button></div>` : "-"}</td></tr>`).join("");
+    document.getElementById("orders").innerHTML = orders.slice(0, 20).map(order => `<tr><td>${escapeHtml(order.userId?.name || order.userId?.email || "-")}<br><small>${escapeHtml(order.userId?.email || "")}</small></td><td>${order.books.map(book => escapeHtml(book.title)).join("، ")}</td><td>${order.total} جنيه</td><td><code>${escapeHtml(order.kashierTransactionId || order.kashierOrderReference || "بانتظار Kashier")}</code></td><td>${order.paymentStatus === "paid" ? "تم الدفع وفتح الكتب" : order.paymentStatus === "failed" ? `فشل الدفع: ${escapeHtml(order.rejectionReason || "غير مكتمل")}` : "بانتظار تأكيد Kashier"}</td></tr>`).join("");
     document.getElementById("users").innerHTML = users.slice(0, 20).map(user => `<tr><td>${user.name}</td><td>${user.email}</td><td>${user.role}</td></tr>`).join("");
-    document.getElementById("books").innerHTML = books.map(book => `<tr><td>${escapeHtml(book.title)}</td><td>${escapeHtml(book.author)}</td><td>${book.price} جنيه</td><td><select class="book-series" data-id="${book._id}">${series.map(item => `<option value="${item._id}" ${String(book.seriesId || "") === String(item._id) ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("")}<option value="" ${book.seriesId ? "" : "selected"}>بدون سلسلة</option></select><button class="save-series" data-id="${book._id}">حفظ السلسلة</button><button class="delete-resource" data-url="/api/admin/books/${book._id}" data-label="الكتاب">حذف</button></td></tr>`).join("");
-    document.getElementById("series").innerHTML = series.map(item => `<tr><td>${escapeHtml(item.name)}</td><td>${escapeHtml(item.description || "-")}</td><td><button class="delete-resource" data-url="/api/admin/series/${item._id}" data-label="السلسلة">حذف</button></td></tr>`).join("");
+    document.getElementById("categories").innerHTML = categories.map(category => `<tr><td>${escapeHtml(category.name)}</td><td>${category.bookCount}</td><td>${category.bookCount ? "مرتبط بكتب" : `<button class="delete-resource" data-url="/api/admin/categories/${category.id}" data-label="التصنيف">حذف</button>`}</td></tr>`).join("");
+    document.getElementById("coupons").innerHTML = coupons.map(coupon => `<tr><td><strong>${escapeHtml(coupon.code)}</strong></td><td>${coupon.type === "percentage" ? "نسبة مئوية" : "مبلغ ثابت"}</td><td>${coupon.value}${coupon.type === "percentage" ? "%" : " جنيه"}</td><td>${coupon.minPurchase || 0} جنيه</td><td>${coupon.maxUses || "غير محدد"}</td><td><button class="delete-resource" data-url="/api/admin/coupons/${coupon._id}" data-label="الكوبون">حذف</button></td></tr>`).join("");
+    document.getElementById("books").innerHTML = books.map(book => `<tr><td>${escapeHtml(book.title)}</td><td>${escapeHtml(book.author)}</td><td>${book.price} جنيه</td><td><button class="delete-resource" data-url="/api/admin/books/${book._id}" data-label="الكتاب">حذف</button></td></tr>`).join("");
 }
 
 async function submitForm(form, url) {
@@ -83,58 +83,12 @@ function readFileAsDataUrl(file, label, maxSize, typePattern) {
 }
 
 submitForm(document.getElementById("bookForm"), "/api/admin/books");
-submitForm(document.getElementById("seriesForm"), "/api/admin/series");
 submitForm(document.getElementById("couponForm"), "/api/admin/coupons");
+submitForm(document.getElementById("categoryForm"), "/api/admin/categories");
 document.addEventListener("click", event => {
     const button = event.target.closest(".delete-resource");
     if (button) deleteResource(button.dataset.url, button.dataset.label);
-    const confirmButton = event.target.closest(".confirm-payment");
-    if (confirmButton) confirmPayment(confirmButton);
-    const rejectButton = event.target.closest(".reject-payment");
-    if (rejectButton) rejectPayment(rejectButton);
-    const receiptButton = event.target.closest(".view-receipt");
-    if (receiptButton) window.open(receiptButton.dataset.receipt, "_blank", "noopener,noreferrer");
-    const seriesButton = event.target.closest(".save-series");
-    if (seriesButton) saveBookSeries(seriesButton);
 });
 
-async function confirmPayment(button) {
-    if (!window.confirm("تأكيد استلام التحويل وفتح الكتاب للمستخدم؟")) return;
-    button.disabled = true;
-    try {
-        await request(`/api/admin/orders/${button.dataset.id}/confirm`, { method: "POST", body: "{}" });
-        showMessage("تم تأكيد الدفع وفتح الكتاب للمستخدم");
-        await loadDashboard();
-    } catch (error) {
-        button.disabled = false;
-        showMessage(error.message || "تعذر تأكيد الدفع", true);
-    }
-}
-
-async function saveBookSeries(button) {
-    const select = document.querySelector(`.book-series[data-id="${button.dataset.id}"]`);
-    button.disabled = true;
-    try {
-        await request(`/api/admin/books/${button.dataset.id}/series`, { method: "PUT", body: JSON.stringify({ seriesId: select.value }) });
-        showMessage("تم تحديث سلسلة الكتاب");
-    } catch (error) {
-        showMessage(error.message || "تعذر تحديث السلسلة", true);
-    } finally {
-        button.disabled = false;
-    }
-}
-
-async function rejectPayment(button) {
-    const reason = window.prompt("سبب رفض الدفع:", "الإيصال غير صحيح أو لم يتم تحويل المبلغ المحدد");
-    if (reason === null) return;
-    button.disabled = true;
-    try {
-        await request(`/api/admin/orders/${button.dataset.id}/reject`, { method: "POST", body: JSON.stringify({ reason }) });
-        showMessage("تم رفض الدفع وإبلاغ العميل");
-        await loadDashboard();
-    } catch (error) {
-        button.disabled = false;
-        showMessage(error.message || "تعذر رفض الدفع", true);
-    }
-}
 loadDashboard().catch(error => showMessage(error.message || "تعذر تحميل لوحة الإدارة", true));
+window.setInterval(() => loadDashboard().catch(() => {}), 15000);

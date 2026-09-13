@@ -5,7 +5,6 @@ const checkoutButton = document.getElementById("checkoutButton");
 const cartMessage = document.getElementById("cartMessage");
 const manualPaymentPanel = document.getElementById("manualPaymentPanel");
 const paymentAmount = document.getElementById("paymentAmount");
-const receiptInput = document.getElementById("receiptInput");
 const submitPayment = document.getElementById("submitPayment");
 const paymentMessage = document.getElementById("paymentMessage");
 const couponCode = document.getElementById("couponCode");
@@ -33,12 +32,16 @@ function showPaymentToast(message, error = false) {
 }
 
 const paymentStatus = new URLSearchParams(window.location.search).get("payment");
+const returnedPaymentId = new URLSearchParams(window.location.search).get("paymentId");
 if (paymentStatus === "paid") {
     cartMessage.textContent = "تم الدفع بنجاح. سيتم تحديث كتبك المشتراة.";
     cartMessage.className = "form-message success";
 } else if (paymentStatus === "failed") {
     cartMessage.textContent = "لم يكتمل الدفع، والكتب ما زالت في السلة.";
     cartMessage.className = "form-message error";
+} else if (paymentStatus === "return") {
+    cartMessage.textContent = "تمت العودة من Kashier. سيتم إتاحة الكتب تلقائيًا بعد تأكيد الدفع.";
+    cartMessage.className = "form-message";
 }
 
 function saveCart() {
@@ -153,7 +156,7 @@ async function submitFreePurchase() {
     cartMessage.textContent = "جارٍ تثبيت الكتب المجانية...";
     cartMessage.className = "form-message";
     try {
-        const response = await fetch("/api/purchases", {
+        const response = await fetch("/api/purchases/free", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ bookIds: cart.map(book => book._id), couponCode: couponCode.value.trim() })
@@ -175,47 +178,21 @@ async function submitFreePurchase() {
 
 submitPayment.addEventListener("click", async () => {
     if (couponCode.value.trim() && !appliedCoupon && !(await applyCoupon())) return;
-    const file = receiptInput.files[0];
-    if (!file) {
-        paymentMessage.textContent = "اختر صورة الإيصال أولًا.";
-        paymentMessage.className = "form-message error";
-        return;
-    }
-    if (!file.type.startsWith("image/") || file.size > 7 * 1024 * 1024) {
-        paymentMessage.textContent = "اختر صورة PNG أو JPG أو WEBP أقل من 7 ميجابايت.";
-        paymentMessage.className = "form-message error";
-        return;
-    }
     submitPayment.disabled = true;
-    const submittedBooks = [...cart];
-    paymentMessage.textContent = "جارٍ إرسال الإيصال للمراجعة...";
+    paymentMessage.textContent = "جارٍ تجهيز رابط الدفع...";
     paymentMessage.className = "form-message";
     try {
-        const receiptImage = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = () => reject(new Error("تعذر قراءة صورة الإيصال"));
-            reader.readAsDataURL(file);
-        });
-        const response = await fetch("/api/purchases", {
+        const response = await fetch("/api/payments/create", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ bookIds: cart.map(book => book._id), receiptImage, couponCode: couponCode.value.trim() })
+            body: JSON.stringify({ bookIds: cart.map(book => book._id), couponCode: couponCode.value.trim() })
         });
         if (!response.ok) throw new Error(await response.text());
         const payment = await response.json();
-        window.accountLibrary.savePaymentRequest(currentUser, cart, payment.paymentId);
-        await window.accountLibrary.save(currentUser, [], favorites);
-        cart = [];
-        manualPaymentPanel.hidden = true;
-        renderCart();
-        cartMessage.textContent = "تم إرسال الإيصال. الكتاب محفوظ محليًا وقيد مراجعة الدفع، وسيتم تحديث حالته تلقائيًا دون إعادة تحميل.";
+        cartMessage.textContent = "سيتم تحويلك الآن إلى Kashier لإتمام الدفع.";
         cartMessage.className = "form-message success";
-        submitPayment.disabled = false;
-        receiptInput.value = "";
-        showPaymentToast("تم إرسال إيصال التحويل بنجاح. تم حفظ طلبك، وسيتم تحويلك إلى كتبي المشتراة لمتابعة التأكيد.");
-        window.setTimeout(() => { window.location.href = "purchased.html?pending=1"; }, 1800);
-        watchPaymentStatus(payment.paymentId, submittedBooks);
+        window.accountLibrary.savePaymentRequest(currentUser, cart, payment.paymentId);
+        window.location.href = payment.paymentUrl;
     } catch (error) {
         submitPayment.disabled = false;
         paymentMessage.textContent = error.message || "تعذر إرسال الإيصال.";
@@ -233,6 +210,9 @@ function watchPaymentStatus(paymentId, submittedBooks) {
             window.accountLibrary.syncPaymentState(currentUser, [payment], submittedBooks);
             window.clearInterval(interval);
             if (payment.status === "paid") {
+                cart = [];
+                await window.accountLibrary.save(currentUser, [], favorites);
+                renderCart();
                 cartMessage.textContent = "تم تأكيد دفع الكتب. أصبحت كتبك متاحة الآن دون إعادة تحميل.";
                 cartMessage.className = "form-message success";
                 return;
@@ -254,6 +234,7 @@ async function initializeCart() {
     cart = library.cart;
     favorites = library.favorites;
     renderCart();
+    if (paymentStatus === "return" && returnedPaymentId) watchPaymentStatus(returnedPaymentId, [...cart]);
 }
 
 initializeCart();

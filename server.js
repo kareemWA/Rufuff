@@ -20,6 +20,9 @@ const DEFAULT_DISCOUNT_PERCENT = 0;
 const SESSION_COOKIE = "book_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 const SESSION_SECRET = process.env.SESSION_SECRET || (process.env.NODE_ENV === "production" ? "" : crypto.randomBytes(32).toString("hex"));
+const KASHIER_SECRET_KEY = process.env.KASHIER_SECRET_KEY || "";
+const KASHIER_MERCHANT_ID = process.env.KASHIER_MERCHANT_ID || "";
+const KASHIER_PAYMENT_URL = process.env.KASHIER_PAYMENT_URL || "https://test-api.kashier.io/v2/payment-link";
 
 if (process.env.DNS_SERVERS) {
     dns.setServers(process.env.DNS_SERVERS.split(",").map(server => server.trim()).filter(Boolean));
@@ -32,7 +35,7 @@ if (process.env.NODE_ENV === "production" && (!SESSION_SECRET || SESSION_SECRET.
 const bookSchema = new mongoose.Schema({
     title: { type: String, required: true, unique: true },
     author: { type: String, required: true },
-    category: { type: String, enum: ["برمجة وتطوير", "ذكاء اصطناعي", "أمن المعلومات", "علوم البيانات"], required: true },
+    category: { type: String, required: true, trim: true, maxlength: 80 },
     price: { type: Number, required: true, min: 0 },
     originalPrice: { type: Number },
     discountPercent: { type: Number, min: 0, max: 90, default: DEFAULT_DISCOUNT_PERCENT },
@@ -47,6 +50,12 @@ bookSchema.index({ category: 1, createdAt: 1 });
 
 const Book = mongoose.model("Book", bookSchema);
 
+const categorySchema = new mongoose.Schema({
+    name: { type: String, required: true, unique: true, trim: true, maxlength: 80 }
+}, { timestamps: true });
+
+const Category = mongoose.model("Category", categorySchema);
+
 const purchaseSchema = new mongoose.Schema({
     userEmail: { type: String, required: true },
     bookId: { type: mongoose.Schema.Types.ObjectId, ref: "Book", required: true },
@@ -59,11 +68,13 @@ const Purchase = mongoose.model("Purchase", purchaseSchema);
 const paymentSchema = new mongoose.Schema({
     userEmail: { type: String, required: true },
     bookIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Book", required: true }],
-    receiptImage: { type: String, required: true },
     rejectionReason: { type: String, default: null },
     orderNumber: { type: Number, unique: true, default: () => Date.now() + Math.floor(Math.random() * 100000) },
     amountCents: { type: Number, required: true },
-    status: { type: String, enum: ["pending", "paid", "failed"], default: "pending" }
+    status: { type: String, enum: ["pending", "paid", "failed"], default: "pending" },
+    kashierOrderId: { type: String, default: null, index: true },
+    kashierTransactionId: { type: String, default: null, index: true },
+    kashierOrderReference: { type: String, default: null, index: true }
 }, { timestamps: true });
 paymentSchema.index({ userEmail: 1, status: 1, createdAt: -1 });
 
@@ -157,6 +168,13 @@ async function createBooksCollection() {
 
     ]);
     console.log("MongoDB collection ready: books");
+}
+
+async function ensureDefaultCategories() {
+    const defaultCategories = ["برمجة وتطوير", "ذكاء اصطناعي", "أمن المعلومات", "علوم البيانات"];
+    await Category.bulkWrite(defaultCategories.map(name => ({
+        updateOne: { filter: { name }, update: { $setOnInsert: { name } }, upsert: true }
+    })));
 }
 
 const userSchema = new mongoose.Schema({
@@ -263,6 +281,7 @@ app.set("trust proxy", 1);
 app.disable("x-powered-by");
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(compression());
+app.use(express.static(path.join(__dirname, "public")));
 app.use(express.static(__dirname));
 app.use(express.json({ limit: "20mb" }));
 
@@ -326,6 +345,15 @@ app.put("/api/library", requireUser, async (req, res) => {
     }
 });
 
+app.get("/api/categories", async (req, res) => {
+    try {
+        const categories = await Category.find().sort({ name: 1 }).lean();
+        res.json(categories.map(category => ({ id: String(category._id), name: category.name })));
+    } catch (error) {
+        res.status(500).send("تعذر تحميل التصنيفات");
+    }
+});
+
 app.get("/api/books", async (req, res) => {
     try {
         const books = await Book.find({ deletedAt: null }).sort({ createdAt: -1 }).lean();
@@ -375,7 +403,15 @@ app.get("/api/admin/orders", requireAdmin, async (req, res) => {
         const users = await User.find({ email: { $in: emails } }).select("email").lean();
         const usersByEmail = new Map(users.map(user => [user.email, user]));
         res.json(payments.map(payment => ({
-            ...payment,
+            id: String(payment._id),
+            userEmail: payment.userEmail,
+            status: payment.status,
+            rejectionReason: payment.rejectionReason,
+            amountCents: payment.amountCents,
+            kashierOrderId: payment.kashierOrderId,
+            kashierTransactionId: payment.kashierTransactionId,
+            kashierOrderReference: payment.kashierOrderReference,
+            createdAt: payment.createdAt,
             userId: usersByEmail.get(payment.userEmail) || { email: payment.userEmail },
             books: payment.bookIds,
             total: Number((payment.amountCents / 100).toFixed(2)),
@@ -401,6 +437,42 @@ app.get("/api/admin/books", requireAdmin, async (req, res) => {
         res.json(books.map(applyBookDiscount));
     } catch (error) {
         res.status(500).send("تعذر تحميل الكتب");
+    }
+});
+
+app.get("/api/admin/categories", requireAdmin, async (req, res) => {
+    try {
+        const categories = await Category.find().sort({ name: 1 }).lean();
+        const usage = await Book.aggregate([{ $group: { _id: "$category", count: { $sum: 1 } } }]);
+        const usageByName = new Map(usage.map(item => [item._id, item.count]));
+        res.json(categories.map(category => ({ id: String(category._id), name: category.name, bookCount: usageByName.get(category.name) || 0 })));
+    } catch (error) {
+        res.status(500).send("تعذر تحميل التصنيفات");
+    }
+});
+
+app.post("/api/admin/categories", requireAdmin, async (req, res) => {
+    try {
+        const name = String(req.body.name || "").trim();
+        if (!name) return res.status(400).send("اسم التصنيف مطلوب");
+        if (name.length > 80) return res.status(400).send("اسم التصنيف طويل جدًا");
+        const category = await Category.create({ name });
+        res.status(201).json({ id: String(category._id), name: category.name, bookCount: 0 });
+    } catch (error) {
+        res.status(error.code === 11000 ? 409 : 400).send(error.code === 11000 ? "التصنيف موجود بالفعل" : "تعذر إضافة التصنيف");
+    }
+});
+
+app.delete("/api/admin/categories/:categoryId", requireAdmin, async (req, res) => {
+    try {
+        const category = await Category.findById(req.params.categoryId).lean();
+        if (!category) return res.status(404).send("التصنيف غير موجود");
+        const booksUsingCategory = await Book.exists({ category: category.name });
+        if (booksUsingCategory) return res.status(409).send("لا يمكن حذف تصنيف مرتبط بكتب");
+        await Category.deleteOne({ _id: category._id });
+        res.status(204).end();
+    } catch (error) {
+        res.status(400).send("تعذر حذف التصنيف");
     }
 });
 
@@ -462,16 +534,18 @@ app.delete("/api/admin/series/:seriesId", requireAdmin, async (req, res) => {
 app.post("/api/admin/books", requireAdmin, async (req, res) => {
     try {
         const { title, author, category, price, discountPercent, cover, file, description, seriesId } = req.body;
+        const normalizedCategory = String(category || "").trim();
         const basePrice = Number(price);
         const discount = Math.min(90, Math.max(0, Number(discountPercent || 0)));
         if (!Number.isFinite(basePrice) || basePrice < 0) return res.status(400).send("السعر يجب أن يكون صفرًا أو أكبر");
         if (!Number.isFinite(discount)) return res.status(400).send("نسبة الخصم غير صحيحة");
+        if (!normalizedCategory || !await Category.exists({ name: normalizedCategory })) return res.status(400).send("التصنيف غير موجود");
         if (typeof cover !== "string" || !cover.trim()) return res.status(400).send("صورة الغلاف مطلوبة");
         if (cover.startsWith("data:") && !/^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/i.test(cover)) return res.status(400).send("صيغة صورة الغلاف غير مدعومة");
         if (typeof file === "string" && file.startsWith("data:") && !/^data:application\/pdf;base64,[A-Za-z0-9+/=]+$/i.test(file)) return res.status(400).send("صيغة ملف الكتاب غير مدعومة");
         if (typeof file === "string" && file.length > 8 * 1024 * 1024) return res.status(413).send("ملف الكتاب كبير جدًا، الحد الأقصى 6 ميجابايت");
         const finalPrice = Math.round(basePrice * (100 - discount) / 100 * 100) / 100;
-        const book = await Book.create({ title, author, category, price: finalPrice, originalPrice: basePrice, discountPercent: discount, image: cover, pdfFile: file || null, description, seriesId: seriesId || null });
+        const book = await Book.create({ title, author, category: normalizedCategory, price: finalPrice, originalPrice: basePrice, discountPercent: discount, image: cover, pdfFile: file || null, description, seriesId: seriesId || null });
         res.status(201).json(book);
     } catch (error) {
         res.status(400).send("تعذر حفظ الكتاب");
@@ -491,6 +565,24 @@ app.post("/api/admin/coupons", requireAdmin, async (req, res) => {
         res.status(201).json(await Coupon.create(req.body));
     } catch (error) {
         res.status(400).send("تعذر حفظ الكوبون");
+    }
+});
+
+app.get("/api/admin/coupons", requireAdmin, async (req, res) => {
+    try {
+        res.json(await Coupon.find().sort({ createdAt: -1 }).lean());
+    } catch (error) {
+        res.status(500).send("تعذر تحميل الكوبونات");
+    }
+});
+
+app.delete("/api/admin/coupons/:couponId", requireAdmin, async (req, res) => {
+    try {
+        const deletedCoupon = await Coupon.findByIdAndDelete(req.params.couponId);
+        if (!deletedCoupon) return res.status(404).send("الكوبون غير موجود");
+        res.status(204).end();
+    } catch (error) {
+        res.status(400).send("تعذر حذف الكوبون");
     }
 });
 
@@ -580,10 +672,115 @@ app.post("/api/books/:bookId/comments", async (req, res) => {
     }
 });
 
-app.post("/api/purchases", async (req, res) => {
+async function getPaymentBooks(req, userEmail) {
+    const { bookIds } = req.body;
+    if (!Array.isArray(bookIds) || !bookIds.length) throw new Error("السلة فارغة");
+    const books = await Book.find({ _id: { $in: bookIds } }).lean();
+    if (books.length !== new Set(bookIds.map(String)).size) throw new Error("أحد الكتب غير موجود");
+    if (await Purchase.exists({ userEmail, bookId: { $in: bookIds }, status: "paid" })) throw new Error("أحد الكتب موجود بالفعل في كتبك المشتراة");
+
+    let amountCents = books.map(applyBookDiscount).reduce((sum, book) => sum + Math.round(book.price * 100), 0);
+    const couponCode = String(req.body.couponCode || "").trim().toUpperCase();
+    if (couponCode) {
+        const coupon = await Coupon.findOne({ code: couponCode }).lean();
+        if (!coupon) throw new Error("كود الخصم غير صحيح");
+        if (amountCents < Math.round(Number(coupon.minPurchase || 0) * 100)) throw new Error("الطلب لا يحقق الحد الأدنى للكوبون");
+        amountCents = coupon.type === "percentage"
+            ? Math.max(0, Math.round(amountCents * (100 - Math.min(100, coupon.value)) / 100))
+            : Math.max(0, amountCents - Math.round(coupon.value * 100));
+    }
+    if (await Payment.exists({ userEmail, bookIds: { $in: bookIds }, status: "pending" })) throw new Error("لديك طلب قيد المراجعة بالفعل");
+    return { books, amountCents };
+}
+
+async function completePayment(payment, transactionId) {
+    if (payment.status === "paid") return;
+    await Purchase.bulkWrite(payment.bookIds.map(bookId => ({
+        updateOne: {
+            filter: { userEmail: payment.userEmail, bookId },
+            update: { userEmail: payment.userEmail, bookId, status: "paid" },
+            upsert: true
+        }
+    })));
+    payment.status = "paid";
+    payment.kashierTransactionId = transactionId || payment.kashierTransactionId;
+    await payment.save();
+    await Library.updateOne({ userEmail: payment.userEmail }, { $set: { cartBookIds: [] } });
+}
+
+app.post("/api/payments/create", async (req, res) => {
     try {
         const userEmail = getSessionEmail(req);
-        const { bookIds, receiptImage } = req.body;
+        if (!userEmail) return res.status(401).send("يجب تسجيل الدخول أولًا");
+        if (!KASHIER_SECRET_KEY || !KASHIER_MERCHANT_ID) return res.status(503).send("لم يتم إعداد بيانات Kashier على الخادم");
+        const { books, amountCents } = await getPaymentBooks(req, userEmail);
+        if (amountCents <= 0) return res.status(400).send("استخدم مسار شراء الكتب المجانية");
+
+        const payment = await Payment.create({ userEmail, bookIds: books.map(book => book._id), amountCents });
+        const orderReference = String(payment._id);
+        const origin = `${req.protocol}://${req.get("host")}`;
+        const response = await fetch(KASHIER_PAYMENT_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: KASHIER_SECRET_KEY },
+            body: JSON.stringify({
+                merchantId: KASHIER_MERCHANT_ID,
+                amount: (amountCents / 100).toFixed(2),
+                currency: "EGP",
+                orderReference,
+                customer: { email: userEmail },
+                redirectUrl: `${origin}/cart.html?payment=return&order=${encodeURIComponent(orderReference)}&paymentId=${encodeURIComponent(String(payment._id))}`,
+                webhookUrl: process.env.KASHIER_WEBHOOK_URL || `${origin}/api/payments/kashier/webhook`
+            })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            await Payment.deleteOne({ _id: payment._id, status: "pending" });
+            return res.status(502).send(data.message || "تعذر إنشاء رابط الدفع عبر Kashier");
+        }
+        const paymentUrl = data.paymentUrl || data.redirectUrl || data.url || data.data?.paymentUrl || data.data?.redirectUrl;
+        if (!paymentUrl) {
+            await Payment.deleteOne({ _id: payment._id, status: "pending" });
+            return res.status(502).send("استجابة Kashier لا تحتوي على رابط دفع");
+        }
+        payment.kashierOrderId = data.kashierOrderId || data.orderId || data.data?.kashierOrderId || null;
+        payment.kashierOrderReference = data.orderReference || data.data?.orderReference || orderReference;
+        await payment.save();
+        res.status(201).json({ paymentUrl, paymentId: String(payment._id), bookIds: books.map(book => String(book._id)) });
+    } catch (error) {
+        const clientError = /السلة|غير موجود|كود الخصم|الحد الأدنى|موجود بالفعل|قيد المراجعة/.test(error.message);
+        res.status(clientError ? 400 : 500).send(error.message || "تعذر إنشاء طلب الدفع");
+    }
+});
+
+app.post("/api/payments/kashier/webhook", async (req, res) => {
+    try {
+        const payload = req.body?.payload || req.body;
+        const data = payload?.data || {};
+        if (KASHIER_MERCHANT_ID && req.body?.merchantId && req.body.merchantId !== KASHIER_MERCHANT_ID) return res.status(401).send("معرّف التاجر غير صحيح");
+        const identifiers = [data.kashierOrderId, data.orderReference, data.merchantOrderId].filter(Boolean);
+        const payment = await Payment.findOne({ $or: [
+            { kashierOrderId: { $in: identifiers } },
+            { kashierOrderReference: { $in: identifiers } },
+            { _id: data.merchantOrderId }
+        ] });
+        if (!payment) return res.status(404).send("طلب الدفع غير موجود");
+        if (data.status === "SUCCESS" && String(data.transactionResponseCode) === "00" && Number(data.amount) === Number((payment.amountCents / 100).toFixed(2))) {
+            await completePayment(payment, data.transactionId);
+        } else if (data.status && data.status !== "SUCCESS" && payment.status === "pending") {
+            payment.status = "failed";
+            payment.rejectionReason = data.transactionResponseMessage?.en || "لم تكتمل معاملة Kashier";
+            await payment.save();
+        }
+        res.status(200).json({ received: true });
+    } catch (error) {
+        res.status(500).send("تعذر معالجة إشعار Kashier");
+    }
+});
+
+app.post("/api/purchases/free", async (req, res) => {
+    try {
+        const userEmail = getSessionEmail(req);
+        const { bookIds } = req.body;
         if (!userEmail) return res.status(401).send("يجب تسجيل الدخول أولًا");
         if (!Array.isArray(bookIds) || !bookIds.length) return res.status(400).send("السلة فارغة");
 
@@ -603,29 +800,18 @@ app.post("/api/purchases", async (req, res) => {
                 : Math.max(0, amountCents - Math.round(coupon.value * 100));
         }
 
-        const alreadyPending = await Payment.exists({ userEmail, bookIds: { $in: bookIds }, status: "pending" });
-        if (alreadyPending) return res.status(409).send("لديك طلب قيد المراجعة بالفعل");
-        if (amountCents === 0) {
-            await Purchase.bulkWrite(books.map(book => ({
-                updateOne: {
-                    filter: { userEmail, bookId: book._id },
-                    update: { userEmail, bookId: book._id, status: "paid" },
-                    upsert: true
-                }
-            })));
-            await Library.updateOne({ userEmail }, { $set: { cartBookIds: [] } });
-            return res.status(201).json({ pending: false, paid: true, bookIds: books.map(book => String(book._id)) });
-        }
-        if (typeof receiptImage !== "string" || !/^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/i.test(receiptImage)) {
-            return res.status(400).send("أرفق صورة إيصال التحويل");
-        }
-        if (receiptImage.length > 10 * 1024 * 1024) return res.status(413).send("حجم الإيصال كبير جدًا");
-        const payment = await Payment.create({ userEmail, bookIds: books.map(book => book._id), receiptImage, amountCents });
+        if (amountCents !== 0) return res.status(400).send("هذا المسار مخصص للكتب المجانية فقط");
+        await Purchase.bulkWrite(books.map(book => ({
+            updateOne: {
+                filter: { userEmail, bookId: book._id },
+                update: { userEmail, bookId: book._id, status: "paid" },
+                upsert: true
+            }
+        })));
         await Library.updateOne({ userEmail }, { $set: { cartBookIds: [] } });
-
-        res.status(201).json({ pending: true, paymentId: String(payment._id), bookIds: books.map(book => String(book._id)) });
+        res.status(201).json({ pending: false, paid: true, bookIds: books.map(book => String(book._id)) });
     } catch (error) {
-        res.status(500).send("تعذر إرسال طلب الدفع للمراجعة");
+        res.status(500).send("تعذر تثبيت الكتب المجانية");
     }
 });
 
@@ -644,40 +830,6 @@ app.get("/api/payments/mine", requireUser, async (req, res) => {
         })));
     } catch (error) {
         res.status(500).send("تعذر تحميل حالة طلباتك");
-    }
-});
-
-app.post("/api/admin/orders/:orderId/confirm", requireAdmin, async (req, res) => {
-    try {
-        const payment = await Payment.findOne({ _id: req.params.orderId, status: "pending" });
-        if (!payment) return res.status(404).send("طلب الدفع غير موجود أو تم اعتماده بالفعل");
-        await Purchase.bulkWrite(payment.bookIds.map(bookId => ({
-            updateOne: {
-                filter: { userEmail: payment.userEmail, bookId },
-                update: { userEmail: payment.userEmail, bookId, status: "paid" },
-                upsert: true
-            }
-        })));
-        payment.status = "paid";
-        await payment.save();
-        res.json({ confirmed: true });
-    } catch (error) {
-        res.status(500).send("تعذر تأكيد الدفع");
-    }
-});
-
-app.post("/api/admin/orders/:orderId/reject", requireAdmin, async (req, res) => {
-    try {
-        const reason = String(req.body.reason || "الإيصال غير صحيح أو لم يتم تحويل المبلغ المحدد").trim();
-        if (!reason) return res.status(400).send("اكتب سبب رفض الدفع");
-        const payment = await Payment.findOne({ _id: req.params.orderId, status: "pending" });
-        if (!payment) return res.status(404).send("طلب الدفع غير موجود أو تم التعامل معه بالفعل");
-        payment.status = "failed";
-        payment.rejectionReason = reason.slice(0, 300);
-        await payment.save();
-        res.json({ rejected: true });
-    } catch (error) {
-        res.status(500).send("تعذر رفض الدفع");
     }
 });
 
@@ -894,6 +1046,7 @@ async function connectDatabase() {
             }
 
             await ensureDefaultAdminUser();
+            await ensureDefaultCategories();
             await createBooksCollection();
         });
     }

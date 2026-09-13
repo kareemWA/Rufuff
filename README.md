@@ -10,7 +10,7 @@ cp .env.example .env
 npm start
 ```
 
-يجب ضبط `MONGODB_URI` و`SESSION_SECRET` و`ADMIN_EMAIL` في `.env`. الدفع يتم بتحويل يدوي إلى الرقم الظاهر في السلة، ثم يراجع المسؤول صورة الإيصال ويعتمد الطلب. في الإنتاج يجب استخدام HTTPS، وقيمة سرية عشوائية، والسماح بعنوان الخادم في MongoDB Atlas.
+يجب ضبط `MONGODB_URI` و`SESSION_SECRET` و`ADMIN_EMAIL` و`KASHIER_SECRET_KEY` و`KASHIER_MERCHANT_ID` في `.env`. الدفع يتم عبر رابط Kashier مستضاف، ويؤكد الخادم الطلب من خلال webhook عام مضبوط في `KASHIER_WEBHOOK_URL`. استخدم `https://test-api.kashier.io/v2/payment-link` للاختبار، وفي الإنتاج استخدم endpoint الذي توفره Kashier لحسابك. في الإنتاج يجب استخدام HTTPS، وقيمة سرية عشوائية، والسماح بعنوان الخادم في MongoDB Atlas.
 
 ## الأمان
 
@@ -26,7 +26,7 @@ npm start
 - السلاسل: `GET /api/series` و`GET /api/series/:id`
 - المفضلة: `GET/POST/DELETE /api/favorites`
 - المكتبة والطلبات: `GET /api/library/owned` و`GET /api/orders`
-- الدفع اليدوي: `POST /api/purchases` و`GET /api/payments/mine`، واعتماد المسؤول عبر `POST /api/admin/orders/:orderId/confirm`
+- الدفع: `POST /api/payments/create`، وإشعار Kashier عبر `POST /api/payments/kashier/webhook`، وحالة الطلب عبر `GET /api/payments/mine`
 - الحساب والمكتبة: `GET /api/me` و`GET/PUT /api/library`، وتعتمد على جلسة HttpOnly.
 - الإدارة: `/admin.html`، مع حماية كل `/api/admin/*` بصلاحية `role=admin`. يكتسب الحساب المطابق لـ `ADMIN_EMAIL` الصلاحية عند التسجيل.
 

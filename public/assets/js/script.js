@@ -5,7 +5,7 @@ const navBottom = document.querySelector(".list_bottom");
 const searchInput = document.getElementById("search_input");
 const booksContainer = document.getElementById("books");
 const booksStatus = document.getElementById("booksStatus");
-const categoryButtons = [...document.querySelectorAll(".category")];
+const categoriesList = document.getElementById("categoriesList");
 const cartButton = document.getElementById("cartButton");
 const cartCount = document.getElementById("cartCount");
 const logout = document.getElementById("logout");
@@ -18,6 +18,13 @@ let selectedCategory = "all";
 let cart = [];
 let favorites = [];
 let books = [];
+let categoryButtons = [];
+
+function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>'"]/g, character => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"
+    }[character]));
+}
 
 function markCurrentMenuItem() {
     const currentPage = window.location.pathname.split("/").pop() || "index.html";
@@ -267,14 +274,27 @@ function updateCart() {
     }
 }
 
-categoryButtons.forEach(button => {
-    button.addEventListener("click", () => {
+function renderCategories(categories) {
+    if (!categoriesList) return;
+    categoriesList.innerHTML = `<button class="category active" data-category="all">الكل</button>${categories.map(category => `<button class="category" data-category="${escapeHtml(category.name)}">${escapeHtml(category.name)}</button>`).join("")}`;
+    categoryButtons = [...categoriesList.querySelectorAll(".category")];
+    categoryButtons.forEach(button => button.addEventListener("click", () => {
         categoryButtons.forEach(item => item.classList.remove("active"));
         button.classList.add("active");
         selectedCategory = button.dataset.category;
         renderBooks();
-    });
-});
+    }));
+}
+
+async function loadCategories() {
+    try {
+        const response = await fetch("/api/categories");
+        if (!response.ok) throw new Error("تعذر تحميل التصنيفات");
+        renderCategories(await response.json());
+    } catch (error) {
+        renderCategories([]);
+    }
+}
 
 if (searchInput) searchInput.addEventListener("input", renderBooks);
 
@@ -349,6 +369,7 @@ async function initializeStore() {
     cart = library.cart;
     favorites = library.favorites;
     updateCart();
+    await loadCategories();
     loadBooks();
 }
 
