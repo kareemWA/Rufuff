@@ -618,7 +618,12 @@ app.get("/api/books/:bookId", async (req, res) => {
         const book = await Book.findOne({ _id: req.params.bookId, deletedAt: null }).lean();
         if (!book) return res.status(404).send("الكتاب غير موجود");
 
-        const comments = await Comment.find({ bookId: book._id }).sort({ createdAt: -1 }).lean();
+        let comments = [];
+        try {
+            comments = await Comment.find({ bookId: book._id }).sort({ createdAt: -1 }).lean();
+        } catch (error) {
+            console.error("Book comments query error:", error.message);
+        }
         const averageRating = comments.length
             ? comments.reduce((sum, comment) => sum + comment.rating, 0) / comments.length
             : 0;
