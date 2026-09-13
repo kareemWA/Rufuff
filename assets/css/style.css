@@ -38,6 +38,8 @@ body.dark-mode { --bg: #1d2421; --surface: #26312c; --soft: #334139; --text: #f4
 .acc { display: flex; align-items: center; gap: 9px; color: var(--text); text-decoration: none; }
 .acc img { width: 40px; height: 40px; border: 2px solid var(--accent); border-radius: 50%; object-fit: cover; }
 .acc h3 { margin: 0; font-size: 13px; font-weight: 600; }
+.install-app-button { border: 1px solid var(--primary); border-radius: 9px; padding: 9px 12px; background: transparent; color: var(--primary); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.install-app-button:hover { background: var(--primary); color: #fff; }
 
 .welcome { position: relative; width: min(1120px, calc(100% - 40px)); margin: 40px auto 0; padding: clamp(30px, 6vw, 66px); overflow: hidden; border: 1px solid #ded4c3; border-radius: 24px; background: linear-gradient(120deg, #e8eee7, #fbf5e9); }
 body.dark-mode .welcome { background: linear-gradient(120deg, #29453a, #3d3b2f); border-color: var(--border); }
