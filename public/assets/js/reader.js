@@ -9,7 +9,7 @@ const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
 
 if (!currentUser?.email) {
     const returnUrl = `${window.location.pathname}${window.location.search}`;
-    window.location.href = `logIn.html?return=${encodeURIComponent(returnUrl)}`;
+    window.location.href = `signin.html?return=${encodeURIComponent(returnUrl)}`;
 }
 
 function showError(message) {

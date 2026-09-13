@@ -33,7 +33,7 @@ function redirectGuest(event) {
     event.preventDefault();
     event.stopPropagation();
     const returnUrl = `${window.location.pathname}${window.location.search}`;
-    window.location.href = `logIn.html?return=${encodeURIComponent(returnUrl)}`;
+    window.location.href = `${signupPage}?return=${encodeURIComponent(returnUrl)}`;
     return true;
 }
 
