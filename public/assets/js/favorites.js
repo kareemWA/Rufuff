@@ -4,10 +4,11 @@ const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
 let favorites = [];
 let cart = [];
 
-function saveFavorites() {
+async function saveFavorites() {
     if (currentUser?.email) {
-        window.accountLibrary.save(currentUser, cart, favorites);
+        return window.accountLibrary.save(currentUser, cart, favorites);
     }
+    return false;
 }
 
 function renderFavorites() {
@@ -39,9 +40,9 @@ function renderFavorites() {
                     <button class="remove-favorite" type="button">إزالة</button>
                 </div>
             </div>`;
-        article.querySelector(".remove-favorite").addEventListener("click", () => {
+        article.querySelector(".remove-favorite").addEventListener("click", async () => {
             favorites = favorites.filter(item => item._id !== book._id);
-            saveFavorites();
+            await saveFavorites();
             renderFavorites();
         });
         favoritesBooks.appendChild(article);

@@ -31,7 +31,7 @@ async function loadReader() {
         readerAuthor.textContent = `تأليف ${book.author}`;
         document.title = `${book.title} | قارئ رفوف`;
 
-        if (!book.pdfFile) {
+        if (!(book.hasPdf ?? Boolean(book.pdfFile))) {
             showError("ملف القراءة غير مرفوع لهذا الكتاب حاليًا.");
             return;
         }

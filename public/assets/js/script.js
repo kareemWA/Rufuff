@@ -151,16 +151,21 @@ function createBookCard(book) {
 
     article.querySelector(".book-details-link").addEventListener("click", redirectGuest);
 
-    article.querySelector(".favorite-toggle").addEventListener("click", event => {
+    article.querySelector(".favorite-toggle").addEventListener("click", async event => {
         if (redirectGuest(event)) return;
         const isFavorite = favorites.some(item => item._id === book._id);
         favorites = isFavorite
             ? favorites.filter(item => item._id !== book._id)
             : [...favorites, book];
-        window.accountLibrary.save(currentUser, cart, favorites);
+        const saved = await window.accountLibrary.save(currentUser, cart, favorites);
         event.currentTarget.textContent = isFavorite ? "♡" : "♥";
         event.currentTarget.classList.toggle("is-favorite", !isFavorite);
         event.currentTarget.setAttribute("aria-label", isFavorite ? `إزالة ${book.title} من المفضلة` : `إضافة ${book.title} للمفضلة`);
+        const message = article.querySelector(".book-message");
+        message.textContent = saved
+            ? (isFavorite ? "تمت إزالة الكتاب من المفضلة." : "تمت إضافة الكتاب إلى المفضلة.")
+            : "تعذر حفظ المفضلة. تحقق من اتصال الموقع.";
+        message.className = `book-message ${saved ? "success" : "error"}`;
     });
 
     if (favorites.some(item => item._id === book._id)) {

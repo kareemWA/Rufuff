@@ -106,14 +106,18 @@ function updatePurchaseButton() {
     if (purchased) downloadButton.href = `${accessUrl}?download=1`;
 }
 
-favoriteButton.addEventListener("click", event => {
+favoriteButton.addEventListener("click", async event => {
     if (redirectGuest(event)) return;
     const isFavorite = favorites.some(item => item._id === book._id);
     favorites = isFavorite
         ? favorites.filter(item => item._id !== book._id)
         : [...favorites, book];
-    window.accountLibrary.save(currentUser, cart, favorites);
+    const saved = await window.accountLibrary.save(currentUser, cart, favorites);
     updateFavoriteButton();
+    purchaseMessage.textContent = saved
+        ? (isFavorite ? "تمت إزالة الكتاب من المفضلة." : "تمت إضافة الكتاب إلى المفضلة.")
+        : "تعذر حفظ المفضلة. تحقق من اتصال الموقع.";
+    purchaseMessage.className = `book-message ${saved ? "success" : "error"}`;
 });
 
 async function loadBook() {
