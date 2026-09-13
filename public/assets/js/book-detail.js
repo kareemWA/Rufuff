@@ -98,7 +98,7 @@ function updateFavoriteButton() {
 }
 
 function updatePurchaseButton() {
-    const isFree = Number(book?.price) <= 0 && Boolean(book?.pdfFile);
+    const isFree = Number(book?.price) <= 0 && (book?.hasPdf ?? Boolean(book?.pdfFile));
     buyButton.textContent = isFree ? "اقرأ مجانًا" : purchased ? "قراءة الكتاب" : pending ? "بانتظار تأكيد الدفع" : "أضف للسلة";
     buyButton.classList.toggle("is-purchased", purchased);
     buyButton.disabled = pending;
@@ -133,7 +133,7 @@ async function loadBook() {
 }
 
 buyButton.addEventListener("click", async event => {
-    const isFree = Number(book?.price) <= 0 && Boolean(book?.pdfFile);
+    const isFree = Number(book?.price) <= 0 && (book?.hasPdf ?? Boolean(book?.pdfFile));
     if (redirectGuest(event)) return;
     if (isFree) {
         window.location.href = `reader.html?id=${encodeURIComponent(book._id)}`;

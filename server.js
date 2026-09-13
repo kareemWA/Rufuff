@@ -125,6 +125,12 @@ function applyBookDiscount(book) {
     return { ...book, originalPrice, discountPercent, price };
 }
 
+function publicBook(book) {
+    const discountedBook = applyBookDiscount(book);
+    const { pdfFile, ...bookWithoutPdf } = discountedBook;
+    return { ...bookWithoutPdf, hasPdf: Boolean(pdfFile) };
+}
+
 function createSessionToken(email) {
     const payload = Buffer.from(JSON.stringify({ email, expiresAt: Date.now() + SESSION_TTL_SECONDS * 1000 })).toString("base64url");
     const signature = crypto.createHmac("sha256", SESSION_SECRET).update(payload).digest("base64url");
@@ -359,7 +365,7 @@ app.get("/api/books", async (req, res) => {
     try {
         const books = await Book.find({ deletedAt: null }).sort({ createdAt: -1 }).lean();
         res.set("Cache-Control", "no-store");
-        res.json(books.map(applyBookDiscount));
+        res.json(books.map(publicBook));
     } catch (error) {
         console.error("Books query error:", error.message);
         res.status(500).send("تعذر تحميل الكتب");
@@ -377,7 +383,7 @@ app.get("/api/purchased-books", requireUser, async (req, res) => {
             ...pendingPayments.flatMap(payment => payment.bookIds)
         ];
         const books = await Book.find({ _id: { $in: bookIds } }).lean();
-        res.json(books.map(applyBookDiscount));
+        res.json(books.map(publicBook));
     } catch (error) {
         res.status(500).send("تعذر تحميل كتبك المشتراة");
     }
@@ -435,7 +441,7 @@ app.get("/api/admin/users", requireAdmin, async (req, res) => {
 app.get("/api/admin/books", requireAdmin, async (req, res) => {
     try {
         const books = await Book.find({ deletedAt: null }).sort({ createdAt: -1 }).lean();
-        res.json(books.map(applyBookDiscount));
+        res.json(books.map(publicBook));
     } catch (error) {
         res.status(500).send("تعذر تحميل الكتب");
     }
@@ -618,7 +624,7 @@ app.get("/api/books/:bookId", async (req, res) => {
             : 0;
 
         res.set("Cache-Control", "no-store");
-        res.json({ ...applyBookDiscount(book), comments, averageRating: Number(averageRating.toFixed(1)), reviewsCount: comments.length });
+        res.json({ ...publicBook(book), comments, averageRating: Number(averageRating.toFixed(1)), reviewsCount: comments.length });
     } catch (error) {
         res.status(500).send("تعذر تحميل تفاصيل الكتاب");
     }
@@ -1073,6 +1079,4 @@ if (require.main === module) {
 }
 
 module.exports = { app, connectDatabase };
-
-
 

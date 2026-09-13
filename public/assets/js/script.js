@@ -124,7 +124,7 @@ function createBookCard(book) {
             <p>${book.author}</p>
             <div class="price-box"><strong class="price">${book.price} جنيه</strong><del>${book.originalPrice || book.price} جنيه</del><span class="discount-badge">خصم ${book.discountPercent || 0}%</span></div>
             <div class="book-footer">
-                ${Number(book.price) <= 0 && book.pdfFile
+                ${Number(book.price) <= 0 && (book.hasPdf ?? Boolean(book.pdfFile))
                     ? `<a class="btn buy-book" href="reader.html?id=${encodeURIComponent(book._id)}">اقرأ مجانًا</a>`
                     : '<button class="btn buy-book" type="button">أضف للسلة</button>'}
             </div>
@@ -209,7 +209,7 @@ async function refreshPurchasedBooks(visibleBooks) {
                 message.textContent = "تم إرسال الإيصال، والكتاب بانتظار تأكيد الدفع.";
                 message.className = "book-message pending";
             } else {
-                message.textContent = book.pdfFile ? "تم شراء الكتاب" : "تم الشراء، ملف PDF غير مرفوع بعد.";
+                message.textContent = (book.hasPdf ?? Boolean(book.pdfFile)) ? "تم شراء الكتاب" : "تم الشراء، ملف PDF غير مرفوع بعد.";
                 message.className = "book-message success";
             }
         }
@@ -232,9 +232,9 @@ async function refreshPurchasedBooks(visibleBooks) {
         }
 
         if (button) button.remove();
-        message.textContent = book.pdfFile ? "تم شراء الكتاب" : "تم الشراء، ملف PDF غير مرفوع بعد.";
+        message.textContent = (book.hasPdf ?? Boolean(book.pdfFile)) ? "تم شراء الكتاب" : "تم الشراء، ملف PDF غير مرفوع بعد.";
         message.className = "book-message success";
-        if (book.pdfFile) {
+        if (book.hasPdf ?? Boolean(book.pdfFile)) {
             message.innerHTML = `<a href="${purchase.accessUrl}?email=${encodeURIComponent(currentUser.email)}" target="_blank">اقرأ الكتاب</a> · <a href="${purchase.accessUrl}?email=${encodeURIComponent(currentUser.email)}&download=1" target="_blank">تحميل PDF</a>`;
         }
     }));
