@@ -40,6 +40,7 @@ const bookSchema = new mongoose.Schema({
     image: { type: String, required: true },
     description: { type: String, default: "كتاب رقمي مختار بعناية من رفوف." },
     pdfFile: { type: String, default: null },
+    readCount: { type: Number, min: 0, default: 0 },
     deletedAt: { type: Date, default: null }
 }, { timestamps: true });
 bookSchema.index({ category: 1, createdAt: 1 });
@@ -526,6 +527,29 @@ app.get("/api/books/:bookId", async (req, res) => {
         res.json({ ...applyBookDiscount(book), comments, averageRating: Number(averageRating.toFixed(1)), reviewsCount: comments.length });
     } catch (error) {
         res.status(500).send("تعذر تحميل تفاصيل الكتاب");
+    }
+});
+
+app.post("/api/books/:bookId/read", requireUser, async (req, res) => {
+    try {
+        const book = await Book.findOne({ _id: req.params.bookId, deletedAt: null }).lean();
+        if (!book) return res.status(404).send("الكتاب غير موجود");
+        if (!book.pdfFile) return res.status(404).send("ملف القراءة غير مرفوع لهذا الكتاب");
+
+        const freeBook = applyBookDiscount(book).price <= 0;
+        if (!freeBook) {
+            const purchase = await Purchase.findOne({ userEmail: req.currentUser.email, bookId: book._id, status: "paid" });
+            if (!purchase) return res.status(403).send("يجب شراء الكتاب أولًا");
+        }
+
+        const updatedBook = await Book.findOneAndUpdate(
+            { _id: book._id, deletedAt: null, pdfFile: { $ne: null } },
+            { $inc: { readCount: 1 } },
+            { new: true }
+        ).select("readCount").lean();
+        res.json({ readCount: updatedBook?.readCount || 0 });
+    } catch (error) {
+        res.status(500).send("تعذر تسجيل القراءة");
     }
 });
 

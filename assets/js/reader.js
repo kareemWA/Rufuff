@@ -36,6 +36,9 @@ async function loadReader() {
             return;
         }
 
+        const readResponse = await fetch(`/api/books/${encodeURIComponent(bookId)}/read`, { method: "POST" });
+        if (!readResponse.ok) throw new Error(await readResponse.text());
+
         const accessUrl = `/api/books/${encodeURIComponent(bookId)}/access`;
         readerFrame.src = accessUrl;
         readerDownload.href = `${accessUrl}?download=1`;

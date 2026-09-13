@@ -9,6 +9,7 @@ const detailPrice = document.getElementById("detailPrice");
 const detailOriginalPrice = document.getElementById("detailOriginalPrice");
 const detailDiscount = document.getElementById("detailDiscount");
 const detailRating = document.getElementById("detailRating");
+const detailReadCount = document.getElementById("detailReadCount");
 const reviewsSummary = document.getElementById("reviewsSummary");
 const commentsList = document.getElementById("commentsList");
 const commentForm = document.getElementById("commentForm");
@@ -82,6 +83,7 @@ function renderBook(data) {
     setText(detailOriginalPrice, `${data.originalPrice || data.price} جنيه`);
     setText(detailDiscount, `خصم ${data.discountPercent || 0}%`);
     setText(detailRating, data.reviewsCount ? `★ ${data.averageRating}` : "☆ لا توجد تقييمات");
+    setText(detailReadCount, `${data.readCount || 0} قراءة`);
     document.title = `${data.title} | رفوف`;
     renderComments(data.comments, data.averageRating);
     updateFavoriteButton();
