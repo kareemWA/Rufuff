@@ -110,16 +110,17 @@
             const booksById = new Map(books.map(book => [String(book._id), book]));
             const accountCartBookIds = library.cartBookIds || [];
             const accountFavoriteBookIds = library.favoriteBookIds || [];
-            const accountHasLibrary = accountCartBookIds.length > 0 || accountFavoriteBookIds.length > 0;
-            const cartBookIds = accountHasLibrary
-                ? accountCartBookIds
-                : [...new Set(localCart.map(book => book._id))];
-            const favoriteBookIds = accountHasLibrary
-                ? accountFavoriteBookIds
-                : [...new Set(localFavorites.map(book => book._id))];
+            const hasLocalCart = localStorage.getItem(storageKey("bookCart", user.email)) !== null;
+            const hasLocalFavorites = localStorage.getItem(storageKey("favoriteBooks", user.email)) !== null;
+            const cartBookIds = hasLocalCart
+                ? [...new Set(localCart.map(book => book._id))]
+                : accountCartBookIds;
+            const favoriteBookIds = hasLocalFavorites
+                ? [...new Set(localFavorites.map(book => book._id))]
+                : accountFavoriteBookIds;
             const cart = cartBookIds.map(id => booksById.get(String(id))).filter(Boolean);
             const favorites = favoriteBookIds.map(id => booksById.get(String(id))).filter(Boolean);
-            if (!accountHasLibrary && (cart.length || favorites.length)) {
+            if ((hasLocalCart || hasLocalFavorites) && (cart.length || favorites.length)) {
                 await save(user, cart, favorites);
             }
             writeLocal("bookCart", cart, user.email);

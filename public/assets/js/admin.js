@@ -37,6 +37,11 @@ async function loadDashboard() {
         request("/api/admin/categories"),
         request("/api/admin/coupons")
     ]);
+    const categorySelect = document.querySelector('#bookForm select[name="category"]');
+    if (categorySelect) {
+        categorySelect.innerHTML = '<option value="">اختر التصنيف</option>'
+            + categories.map(category => `<option value="${escapeHtml(category.name)}">${escapeHtml(category.name)}</option>`).join("");
+    }
     document.getElementById("usersCount").textContent = stats.users;
     document.getElementById("booksCount").textContent = stats.books;
     document.getElementById("ordersCount").textContent = stats.orders;

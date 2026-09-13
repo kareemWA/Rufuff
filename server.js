@@ -357,7 +357,7 @@ app.get("/api/categories", async (req, res) => {
 app.get("/api/books", async (req, res) => {
     try {
         const books = await Book.find({ deletedAt: null }).sort({ createdAt: -1 }).lean();
-        res.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
+        res.set("Cache-Control", "no-store");
         res.json(books.map(applyBookDiscount));
     } catch (error) {
         console.error("Books query error:", error.message);
@@ -1068,4 +1068,5 @@ if (require.main === module) {
 }
 
 module.exports = { app, connectDatabase };
+
 

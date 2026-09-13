@@ -253,7 +253,7 @@ async function loadBooks() {
     }
 
     try {
-        const response = await fetch("/api/books");
+        const response = await fetch(`/api/books?refresh=${Date.now()}`, { cache: "no-store" });
         if (!response.ok) throw new Error("تعذر تحميل الكتب");
         books = sortBooksNewestFirst(await response.json());
         localStorage.setItem("booksCache", JSON.stringify(books));
@@ -267,10 +267,10 @@ async function loadBooks() {
     }
 }
 
-function updateCart() {
+async function updateCart() {
     if (cartCount) cartCount.textContent = cart.length;
     if (currentUser?.email) {
-        window.accountLibrary.save(currentUser, cart, favorites);
+        await window.accountLibrary.save(currentUser, cart, favorites);
     }
 }
 
@@ -368,7 +368,7 @@ async function initializeStore() {
     const library = await window.accountLibrary.load(currentUser);
     cart = library.cart;
     favorites = library.favorites;
-    updateCart();
+    await updateCart();
     await loadCategories();
     loadBooks();
 }
