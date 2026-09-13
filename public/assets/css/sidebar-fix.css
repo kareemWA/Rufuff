@@ -1,11 +1,26 @@
 /* Sidebar and profile upload overrides for the deployed site. */
-.list, .list_bottom { position: fixed; right: 24px; z-index: 19; width: 244px; padding: 15px 12px 12px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border)); border-radius: 20px; background: color-mix(in srgb, var(--surface) 96%, transparent); box-shadow: 0 22px 60px rgba(44, 55, 45, .18); backdrop-filter: blur(20px); }
+.btn-open-list { display: none; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid color-mix(in srgb, var(--primary) 20%, var(--border)); border-radius: 14px; background: var(--surface); color: var(--primary); box-shadow: 0 8px 18px rgba(44, 55, 45, .1); transition: background .2s, border-color .2s, transform .2s, box-shadow .2s; }
+.btn-open-list:hover { border-color: var(--primary); background: var(--soft); box-shadow: 0 10px 22px rgba(44, 55, 45, .14); transform: translateY(-1px); }
+.btn-open-list:active { transform: translateY(0) scale(.96); }
+.menu-icon, .menu-icon::before, .menu-icon::after { display: block; width: 20px; height: 2px; border-radius: 2px; background: currentColor; transition: transform .22s ease, opacity .18s ease, background .22s ease; }
+.menu-icon { position: relative; }
+.menu-icon::before, .menu-icon::after { content: ""; position: absolute; right: 0; }
+.menu-icon::before { top: -7px; }
+.menu-icon::after { top: 7px; }
+.btn-open-list[aria-expanded="true"] .menu-icon { background: transparent; }
+.btn-open-list[aria-expanded="true"] .menu-icon::before { transform: translateY(7px) rotate(45deg); }
+.btn-open-list[aria-expanded="true"] .menu-icon::after { transform: translateY(-7px) rotate(-45deg); }
+
+.list, .list_bottom { position: fixed; right: 24px; z-index: 19; width: 244px; padding: 15px 12px 12px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--primary) 16%, var(--border)); border-radius: 18px; background: color-mix(in srgb, var(--surface) 97%, transparent); box-shadow: 0 14px 36px rgba(44, 55, 45, .12); backdrop-filter: blur(18px); }
 .list { top: 96px; }
 .list_bottom { top: 350px; }
 .list::before, .list_bottom::before { display: block; margin: 0 10px 8px; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .4px; }
 .list::before { content: "تصفح المكتبة"; }
 .list_bottom::before { content: "حسابك"; }
-.list a, .list_bottom a { display: flex; align-items: center; min-height: 45px; gap: 9px; padding: 0 14px; border: 1px solid transparent; border-radius: 12px; }
+.list a, .list_bottom a { display: flex; align-items: center; min-height: 44px; gap: 9px; padding: 0 13px; border: 1px solid transparent; border-radius: 11px; transition: background .2s, border-color .2s, color .2s, transform .2s; }
+.list a:hover, .list_bottom a:hover, .list a:focus-visible, .list_bottom a:focus-visible { border-color: color-mix(in srgb, var(--primary) 15%, transparent); background: color-mix(in srgb, var(--primary) 8%, var(--soft)); color: var(--primary); transform: translateX(-2px); outline: 0; }
+.list a.is-current, .list_bottom a.is-current { border-color: color-mix(in srgb, var(--primary) 18%, transparent); background: color-mix(in srgb, var(--primary) 10%, var(--soft)); color: var(--primary); font-weight: 700; }
+.list a.is-current::first-letter, .list_bottom a.is-current::first-letter { color: var(--accent); }
 
 .settings-page .section { position: relative; }
 .settings-page .img { width: 112px; height: 112px; border: 4px solid var(--surface); outline: 3px solid var(--accent); box-shadow: 0 10px 24px rgba(49, 94, 80, .18); }
@@ -16,11 +31,18 @@
 .settings-page .image-upload-button:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 10px 20px rgba(49, 94, 80, .24); }
 
 @media (max-width: 900px) {
-    .list, .list_bottom { right: 0; left: auto; width: min(320px, calc(100vw - 18px)); max-height: none; overflow-y: auto; border-width: 0 0 0 1px; border-radius: 0; transform: translateX(105%); opacity: 0; pointer-events: none; transition: transform .25s ease, opacity .2s ease; }
-    .list { top: 0; bottom: 50%; padding: 86px 14px 14px; border-radius: 0 0 0 22px; }
-    .list_bottom { top: 50%; bottom: 0; padding: 14px; }
+    body.menu-open { overflow: hidden; }
+    body.menu-open::before { content: ""; position: fixed; inset: 0; z-index: 25; background: rgba(35, 42, 37, .24); backdrop-filter: blur(2px); cursor: pointer; }
+    .btn-open-list { display: inline-grid; position: relative; z-index: 28; }
+    .list, .list_bottom { right: 0; left: auto; width: min(360px, 84vw); max-height: none; overflow-y: auto; border-width: 0 0 0 1px; border-radius: 0; transform: translateX(105%); opacity: 0; pointer-events: none; transition: transform .28s cubic-bezier(.22, .8, .26, 1), opacity .2s ease; }
+    .list { top: 0; bottom: 50%; padding: 76px 14px 14px; border-radius: 0 0 0 20px; }
+    .list_bottom { top: 50%; bottom: 0; padding: 14px; border-radius: 20px 0 0 0; }
     .list.show, .list_bottom.show { display: block; transform: translateX(0); opacity: 1; pointer-events: auto; animation: none; z-index: 26; }
     .settings-page .img { width: 88px; height: 88px; }
     .settings-page .pho-nam { margin-bottom: 18px; padding: 16px 10px 13px; }
     .settings-page .image-upload-button { width: min(100%, 190px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .btn-open-list, .menu-icon, .menu-icon::before, .menu-icon::after, .list, .list_bottom { transition: none; }
 }

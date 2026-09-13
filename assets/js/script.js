@@ -19,6 +19,18 @@ let cart = [];
 let favorites = [];
 let books = [];
 
+function markCurrentMenuItem() {
+    const currentPage = window.location.pathname.split("/").pop() || "index.html";
+    document.querySelectorAll(".list a, .list_bottom a").forEach(element => {
+        const target = (element.getAttribute("href") || "").split(/[?#]/)[0];
+        const isCurrent = target && target === currentPage;
+        element.classList.toggle("is-current", isCurrent);
+        if (isCurrent) element.setAttribute("aria-current", "page");
+    });
+}
+
+markCurrentMenuItem();
+
 function sortBooksNewestFirst(items) {
     return [...items].sort((left, right) => {
         const leftDate = new Date(left.createdAt || 0).getTime();
@@ -306,6 +318,7 @@ function closeMenu() {
     navBottom.classList.remove("show");
     document.body.classList.remove("menu-open");
     menuButton?.setAttribute("aria-expanded", "false");
+    menuButton?.setAttribute("aria-label", "فتح القائمة");
 }
 
 if (menuButton && nav && navBottom) {
@@ -315,6 +328,7 @@ if (menuButton && nav && navBottom) {
         navBottom.classList.toggle("show", isOpen);
         document.body.classList.toggle("menu-open", isOpen);
         menuButton.setAttribute("aria-expanded", String(isOpen));
+        menuButton.setAttribute("aria-label", isOpen ? "إغلاق القائمة" : "فتح القائمة");
     });
 
     document.addEventListener("click", event => {
