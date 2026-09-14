@@ -19,6 +19,7 @@ let cart = [];
 let favorites = [];
 let books = [];
 let categoryButtons = [];
+let purchaseState = null;
 
 function escapeHtml(value) {
     return String(value ?? "").replace(/[&<>'"]/g, character => ({
@@ -198,14 +199,31 @@ function renderBooks() {
 async function refreshPurchasedBooks(visibleBooks) {
     if (!currentUser) return;
 
+    if (!purchaseState) {
+        purchaseState = { purchasedIds: new Set(), pendingIds: new Set(), loading: null };
+        purchaseState.loading = fetch("/api/purchases")
+            .then(response => {
+                if (!response.ok) throw new Error("تعذر تحميل حالة المشتريات");
+                return response.json();
+            })
+            .then(data => {
+                purchaseState.purchasedIds = new Set(data.purchasedIds || []);
+                purchaseState.pendingIds = new Set(data.pendingIds || []);
+            })
+            .catch(() => {});
+    }
+
+    await purchaseState.loading;
     const localRecords = window.accountLibrary?.readPaymentState(currentUser)?.records || {};
 
-    await Promise.all(visibleBooks.map(async book => {
+    visibleBooks.forEach(book => {
         const card = [...booksContainer.querySelectorAll(".one_videos")]
             .find(element => element.dataset.title === book.title);
         if (!card) return;
 
         const localRecord = localRecords[String(book._id)];
+        const isPending = purchaseState.pendingIds.has(String(book._id));
+        const isPurchased = purchaseState.purchasedIds.has(String(book._id));
         if (localRecord?.status === "pending" || localRecord?.status === "paid") {
             const button = card.querySelector(".buy-book");
             const message = card.querySelector(".book-message");
@@ -219,20 +237,17 @@ async function refreshPurchasedBooks(visibleBooks) {
             }
         }
 
-        const response = await fetch(`/api/purchases/${book._id}?email=${encodeURIComponent(currentUser.email)}`);
-        if (!response.ok) return;
-        const purchase = await response.json();
         const button = card.querySelector(".buy-book");
         const message = card.querySelector(".book-message");
-        if (purchase.pending) {
+        if (isPending) {
             if (button) button.remove();
             message.textContent = "تم إرسال الإيصال، والكتاب بانتظار تأكيد الدفع.";
             message.className = "book-message pending";
             return;
         }
-        if (!purchase.purchased) return;
+        if (!isPurchased) return;
 
-        if (purchase.purchased && localRecord?.status !== "paid") {
+        if (isPurchased && localRecord?.status !== "paid") {
             window.accountLibrary.markPaymentRecord(currentUser, book, "paid");
         }
 
@@ -240,12 +255,21 @@ async function refreshPurchasedBooks(visibleBooks) {
         message.textContent = (book.hasPdf ?? Boolean(book.pdfFile)) ? "تم شراء الكتاب" : "تم الشراء، ملف PDF غير مرفوع بعد.";
         message.className = "book-message success";
         if (book.hasPdf ?? Boolean(book.pdfFile)) {
-            message.innerHTML = `<a href="${purchase.accessUrl}?email=${encodeURIComponent(currentUser.email)}" target="_blank">اقرأ الكتاب</a> · <a href="${purchase.accessUrl}?email=${encodeURIComponent(currentUser.email)}&download=1" target="_blank">تحميل PDF</a>`;
+            const accessUrl = `/api/books/${encodeURIComponent(book._id)}/access`;
+            message.innerHTML = `<a href="${accessUrl}" target="_blank">اقرأ الكتاب</a> · <a href="${accessUrl}?download=1" target="_blank">تحميل PDF</a>`;
         }
-    }));
+    });
 }
 
 async function loadBooks() {
+    const sharedBooks = window.accountLibrary?.getBooks?.();
+    if (Array.isArray(sharedBooks) && sharedBooks.length) {
+        books = sortBooksNewestFirst(sharedBooks);
+        if (booksStatus) booksStatus.remove();
+        renderBooks();
+        return;
+    }
+
     try {
         const cachedBooks = JSON.parse(localStorage.getItem("booksCache") || "null");
         if (Array.isArray(cachedBooks) && cachedBooks.length) {
@@ -258,7 +282,7 @@ async function loadBooks() {
     }
 
     try {
-        const response = await fetch(`/api/books?refresh=${Date.now()}`, { cache: "no-store" });
+        const response = await fetch("/api/books");
         if (!response.ok) throw new Error("تعذر تحميل الكتب");
         books = sortBooksNewestFirst(await response.json());
         localStorage.setItem("booksCache", JSON.stringify(books));

@@ -94,13 +94,10 @@ async function loadPurchasedBooks(notify = false) {
         const books = await response.json();
         window.accountLibrary?.syncPaymentState(currentUser, payments, books);
         purchasedBooks.innerHTML = "";
-        const checks = await Promise.all(books.map(async book => {
-            const purchaseResponse = await fetch(`/api/purchases/${book._id}?email=${encodeURIComponent(currentUser.email)}`);
-            if (!purchaseResponse.ok) throw new Error("تعذر مزامنة ملكية الكتب");
-            const purchase = await purchaseResponse.json();
-            return purchase.purchased ? { book, purchase } : null;
+        const ownedBooks = books.map(book => ({
+            book,
+            purchase: { accessUrl: `/api/books/${book._id}/access` }
         }));
-        const ownedBooks = checks.filter(Boolean);
         const latestPayment = payments[0];
         const pendingBookIds = new Set(
             payments.filter(payment => payment.status === "pending")

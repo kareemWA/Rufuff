@@ -1,5 +1,6 @@
 (() => {
     let saveQueue = Promise.resolve();
+    let booksCache = null;
 
     function storageKey(name, email) {
         const normalizedEmail = (email || "guest").trim().toLowerCase();
@@ -107,6 +108,7 @@
 
             const library = await libraryResponse.json();
             const books = await booksResponse.json();
+            booksCache = books;
             const booksById = new Map(books.map(book => [String(book._id), book]));
             const accountCartBookIds = library.cartBookIds || [];
             const accountFavoriteBookIds = library.favoriteBookIds || [];
@@ -157,5 +159,5 @@
         return saveQueue;
     }
 
-    window.accountLibrary = { load, save, clearLegacyLocalData, clearUserData, readPaymentState, savePaymentRequest, syncPaymentState, markPaymentRecord };
+    window.accountLibrary = { load, save, getBooks: () => booksCache, clearLegacyLocalData, clearUserData, readPaymentState, savePaymentRequest, syncPaymentState, markPaymentRecord };
 })();

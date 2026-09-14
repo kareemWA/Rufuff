@@ -46,7 +46,7 @@ const bookSchema = new mongoose.Schema({
     readCount: { type: Number, min: 0, default: 0 },
     deletedAt: { type: Date, default: null }
 }, { timestamps: true });
-bookSchema.index({ category: 1, createdAt: 1 });
+bookSchema.index({ deletedAt: 1, createdAt: -1 });
 
 const Book = mongoose.model("Book", bookSchema);
 
@@ -63,6 +63,7 @@ const purchaseSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 purchaseSchema.index({ userEmail: 1, bookId: 1 }, { unique: true });
+purchaseSchema.index({ userEmail: 1, status: 1 });
 const Purchase = mongoose.model("Purchase", purchaseSchema);
 
 const paymentSchema = new mongoose.Schema({
@@ -128,7 +129,30 @@ function applyBookDiscount(book) {
 function publicBook(book) {
     const discountedBook = applyBookDiscount(book);
     const { pdfFile, ...bookWithoutPdf } = discountedBook;
-    return { ...bookWithoutPdf, hasPdf: Boolean(pdfFile) };
+    return { ...bookWithoutPdf, hasPdf: book.hasPdf ?? Boolean(pdfFile) };
+}
+
+async function findBookSummaries(filter = {}) {
+    return Book.aggregate([
+        { $match: filter },
+        { $sort: { createdAt: -1 } },
+        { $project: {
+            title: 1,
+            author: 1,
+            category: 1,
+            price: 1,
+            originalPrice: 1,
+            discountPercent: 1,
+            seriesId: 1,
+            image: 1,
+            description: 1,
+            readCount: 1,
+            deletedAt: 1,
+            createdAt: 1,
+            updatedAt: 1,
+            hasPdf: { $ne: [{ $ifNull: ["$pdfFile", null] }, null] }
+        } }
+    ]);
 }
 
 function createSessionToken(email) {
@@ -365,8 +389,8 @@ app.get("/api/categories", async (req, res) => {
 
 app.get("/api/books", async (req, res) => {
     try {
-        const books = await Book.find({ deletedAt: null }).sort({ createdAt: -1 }).lean();
-        res.set("Cache-Control", "no-store");
+        const books = await findBookSummaries({ deletedAt: null });
+        res.set("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
         res.json(books.map(publicBook));
     } catch (error) {
         console.error("Books query error:", error.message);
@@ -442,7 +466,7 @@ app.get("/api/admin/users", requireAdmin, async (req, res) => {
 
 app.get("/api/admin/books", requireAdmin, async (req, res) => {
     try {
-        const books = await Book.find({ deletedAt: null }).sort({ createdAt: -1 }).lean();
+        const books = await findBookSummaries({ deletedAt: null });
         res.json(books.map(publicBook));
     } catch (error) {
         res.status(500).send("تعذر تحميل الكتب");
@@ -868,6 +892,25 @@ app.get("/api/purchases/:bookId", async (req, res) => {
     }
 });
 
+app.get("/api/purchases", async (req, res) => {
+    try {
+        const userEmail = getSessionEmail(req);
+        if (!userEmail) return res.status(401).send("يجب تسجيل الدخول أولًا");
+
+        const [purchases, pendingPayments] = await Promise.all([
+            Purchase.find({ userEmail, status: "paid" }).select("bookId").lean(),
+            Payment.find({ userEmail, status: "pending" }).select("bookIds").lean()
+        ]);
+
+        res.json({
+            purchasedIds: purchases.map(item => String(item.bookId)),
+            pendingIds: pendingPayments.flatMap(payment => payment.bookIds.map(bookId => String(bookId)))
+        });
+    } catch (error) {
+        res.status(500).send("تعذر التحقق من مشترياتك");
+    }
+});
+
 app.get("/api/books/:bookId/access", async (req, res) => {
     try {
         const book = await Book.findById(req.params.bookId).lean();
@@ -1086,4 +1129,5 @@ if (require.main === module) {
 }
 
 module.exports = { app, connectDatabase };
+
 
