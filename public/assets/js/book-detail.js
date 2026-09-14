@@ -91,11 +91,6 @@ function renderBook(data) {
     detailStatus.hidden = true;
 }
 
-function updateFavoriteButton() {
-    const isFavorite = favorites.some(item => item._id === book._id);
-    favoriteButton.textContent = isFavorite ? "♥ في المفضلة" : "♡ إضافة للمفضلة";
-    favoriteButton.classList.toggle("is-favorite", isFavorite);
-}
 
 function updatePurchaseButton() {
     const isFree = Number(book?.price) <= 0 && (book?.hasPdf ?? Boolean(book?.pdfFile));
@@ -106,19 +101,7 @@ function updatePurchaseButton() {
     if (purchased) downloadButton.href = `${accessUrl}?download=1`;
 }
 
-favoriteButton.addEventListener("click", async event => {
-    if (redirectGuest(event)) return;
-    const isFavorite = favorites.some(item => item._id === book._id);
-    favorites = isFavorite
-        ? favorites.filter(item => item._id !== book._id)
-        : [...favorites, book];
-    const saved = await window.accountLibrary.save(currentUser, cart, favorites);
-    updateFavoriteButton();
-    purchaseMessage.textContent = saved
-        ? (isFavorite ? "تمت إزالة الكتاب من المفضلة." : "تمت إضافة الكتاب إلى المفضلة.")
-        : "تعذر حفظ المفضلة. تحقق من اتصال الموقع.";
-    purchaseMessage.className = `book-message ${saved ? "success" : "error"}`;
-});
+
 
 async function loadBook() {
     if (!bookId) throw new Error("رابط الكتاب غير صحيح");
