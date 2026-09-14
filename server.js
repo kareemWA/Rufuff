@@ -643,21 +643,37 @@ app.get("/api/books/:bookId", async (req, res) => {
     try {
         const book = await Book.findOne({ _id: req.params.bookId, deletedAt: null }).lean();
         if (!book) return res.status(404).send("الكتاب غير موجود");
-
-        let comments = [];
-        try {
-            comments = await Comment.find({ bookId: book._id }).sort({ createdAt: -1 }).lean();
-        } catch (error) {
-            console.error("Book comments query error:", error.message);
-        }
-        const averageRating = comments.length
-            ? comments.reduce((sum, comment) => sum + comment.rating, 0) / comments.length
-            : 0;
-
-        res.set("Cache-Control", "no-store");
-        res.json({ ...publicBook(book), comments, averageRating: Number(averageRating.toFixed(1)), reviewsCount: comments.length });
+        res.set("Cache-Control", "public, max-age=300, stale-while-revalidate=600");
+        res.json(publicBook(book));
     } catch (error) {
         res.status(500).send("تعذر تحميل تفاصيل الكتاب");
+    }
+});
+
+app.get("/api/books/:bookId/comments", async (req, res) => {
+    try {
+        const [result] = await Comment.aggregate([
+            { $match: { bookId: new mongoose.Types.ObjectId(req.params.bookId) } },
+            { $facet: {
+                comments: [
+                    { $sort: { createdAt: -1 } },
+                    { $project: { _id: 0, userName: 1, rating: 1, text: 1, createdAt: 1 } }
+                ],
+                summary: [
+                    { $group: { _id: null, count: { $sum: 1 }, averageRating: { $avg: "$rating" } } }
+                ]
+            } }
+        ]);
+        const summary = result?.summary[0] || { count: 0, averageRating: 0 };
+        res.set("Cache-Control", "public, max-age=15, stale-while-revalidate=60");
+        res.json({
+            comments: result?.comments || [],
+            averageRating: Number(Number(summary.averageRating || 0).toFixed(1)),
+            reviewsCount: summary.count || 0
+        });
+    } catch (error) {
+        console.error("Book comments query error:", error.message);
+        res.status(500).send("تعذر تحميل التقييمات");
     }
 });
 
