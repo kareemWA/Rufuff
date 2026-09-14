@@ -194,15 +194,6 @@ commentForm.addEventListener("submit", async event => {
     }
 });
 
-async function initializeBookDetails() {
-    const [library] = await Promise.all([
-        window.accountLibrary.load(currentUser),
-        loadBook()
-    ]);
-    cart = library.cart;
-    
-    
-}
 
 initializeBookDetails().catch(error => {
     detailStatus.textContent = error.message || "تعذر تحميل تفاصيل الكتاب.";
