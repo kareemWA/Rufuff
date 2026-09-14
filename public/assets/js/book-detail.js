@@ -122,20 +122,46 @@ favoriteButton.addEventListener("click", async event => {
 
 async function loadBook() {
     if (!bookId) throw new Error("رابط الكتاب غير صحيح");
-    const response = await fetch(`/api/books/${encodeURIComponent(bookId)}`);
-    if (!response.ok) throw new Error(await response.text());
-    renderBook(await response.json());
 
-    const purchaseResponse = await fetch(`/api/purchases/${encodeURIComponent(bookId)}`);
+    const [bookResponse, commentsResponse, purchaseResponse] = await Promise.all([
+        fetch(`/api/books/${encodeURIComponent(bookId)}`),
+        fetch(`/api/books/${encodeURIComponent(bookId)}/comments`),
+        fetch(`/api/purchases/${encodeURIComponent(bookId)}`)
+    ]);
+
+    if (!bookResponse.ok) {
+        throw new Error(await bookResponse.text());
+    }
+
+    const bookData = await bookResponse.json();
+
+    let commentsData = {
+        comments: [],
+        averageRating: 0,
+        reviewsCount: 0
+    };
+
+    if (commentsResponse.ok) {
+        commentsData = await commentsResponse.json();
+    }
+
+    renderBook({
+        ...bookData,
+        comments: commentsData.comments || [],
+        averageRating: commentsData.averageRating || 0,
+        reviewsCount: commentsData.reviewsCount || 0
+    });
+
     if (purchaseResponse.ok) {
         const purchase = await purchaseResponse.json();
+
         purchased = purchase.purchased;
         pending = purchase.pending;
         accessUrl = purchase.accessUrl;
+
         updatePurchaseButton();
     }
 }
-
 buyButton.addEventListener("click", async event => {
     const isFree = Number(book?.price) <= 0 && (book?.hasPdf ?? Boolean(book?.pdfFile));
     if (redirectGuest(event)) return;
