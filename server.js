@@ -1081,11 +1081,12 @@ async function ensureDefaultAdminUser() {
     console.log(`Default admin account created for ${configuredAdminEmail} with password: ${adminPassword}`);
 }
 
-let databasePromise;
+const databaseState = globalThis.__rufuffDatabaseState || { promise: null };
+globalThis.__rufuffDatabaseState = databaseState;
 
 async function connectDatabase() {
-    if (!databasePromise) {
-        databasePromise = mongoose.connect(MONGODB_URI, {
+    if (!databaseState.promise) {
+        databaseState.promise = mongoose.connect(MONGODB_URI, {
             serverSelectionTimeoutMS: 5000,
             maxPoolSize: 10,
             minPoolSize: 0,
@@ -1107,11 +1108,11 @@ async function connectDatabase() {
             await ensureDefaultCategories();
             await createBooksCollection();
         }).catch(error => {
-            databasePromise = null;
+            databaseState.promise = null;
             throw error;
         });
     }
-    return databasePromise;
+    return databaseState.promise;
 }
 
 async function startServer() {
@@ -1129,5 +1130,4 @@ if (require.main === module) {
 }
 
 module.exports = { app, connectDatabase };
-
 
