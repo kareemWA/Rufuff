@@ -200,8 +200,8 @@ async function initializeBookDetails() {
         loadBook()
     ]);
     cart = library.cart;
-    favorites = library.favorites;
-    updateFavoriteButton();
+    
+    
 }
 
 initializeBookDetails().catch(error => {
