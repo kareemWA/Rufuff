@@ -129,7 +129,7 @@ function createBookCard(book) {
                     ? `<a class="btn buy-book" href="reader.html?id=${encodeURIComponent(book._id)}">اقرأ مجانًا</a>`
                     : '<button class="btn buy-book" type="button">أضف للسلة</button>'}
             </div>
-            <button class="favorite-toggle" type="button" aria-label="إضافة ${book.title} للمفضلة">${favorites.some(item => item._id === book._id) ? "♥" : "♡"}</button>
+           
             <a class="book-details-link" href="book-detail.html?id=${book._id}">التفاصيل</a>
             <p class="book-message" role="status" aria-live="polite"></p>
         </div>`;
@@ -152,22 +152,7 @@ function createBookCard(book) {
 
     article.querySelector(".book-details-link").addEventListener("click", redirectGuest);
 
-    article.querySelector(".favorite-toggle").addEventListener("click", async event => {
-        if (redirectGuest(event)) return;
-        const isFavorite = favorites.some(item => item._id === book._id);
-        favorites = isFavorite
-            ? favorites.filter(item => item._id !== book._id)
-            : [...favorites, book];
-        const saved = await window.accountLibrary.save(currentUser, cart, favorites);
-        event.currentTarget.textContent = isFavorite ? "♡" : "♥";
-        event.currentTarget.classList.toggle("is-favorite", !isFavorite);
-        event.currentTarget.setAttribute("aria-label", isFavorite ? `إزالة ${book.title} من المفضلة` : `إضافة ${book.title} للمفضلة`);
-        const message = article.querySelector(".book-message");
-        message.textContent = saved
-            ? (isFavorite ? "تمت إزالة الكتاب من المفضلة." : "تمت إضافة الكتاب إلى المفضلة.")
-            : "تعذر حفظ المفضلة. تحقق من اتصال الموقع.";
-        message.className = `book-message ${saved ? "success" : "error"}`;
-    });
+    
 
     if (favorites.some(item => item._id === book._id)) {
         article.querySelector(".favorite-toggle").classList.add("is-favorite");
@@ -365,9 +350,6 @@ if (cartButton) {
     cartButton.addEventListener("click", () => { window.location.href = "cart.html"; });
 }
 
-const favoriteLink = document.getElementById("favorite");
-if (favoriteLink) favoriteLink.href = "favorites.html";
-
 function closeMenu() {
     if (!nav || !navBottom) return;
     nav.classList.remove("show");
@@ -403,7 +385,7 @@ async function initializeStore() {
     await refreshCurrentUserFromServer();
     const library = await window.accountLibrary.load(currentUser);
     cart = library.cart;
-    favorites = library.favorites;
+    
     await updateCart();
     await loadCategories();
     loadBooks();
