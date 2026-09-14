@@ -16,7 +16,7 @@ const commentForm = document.getElementById("commentForm");
 const commentMessage = document.getElementById("commentMessage");
 const buyButton = document.getElementById("buyButton");
 const purchaseMessage = document.getElementById("purchaseMessage");
-const favoriteButton = document.getElementById("favoriteButton");
+
 const downloadButton = document.getElementById("downloadButton");
 const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
 const signupPage = "signin.html";
@@ -26,7 +26,7 @@ let purchased = false;
 let pending = false;
 let accessUrl = "";
 let cart = [];
-let favorites = [];
+
 
 function redirectGuest(event) {
     if (currentUser?.email) return false;
@@ -90,6 +90,7 @@ function renderBook(data) {
     bookDetail.hidden = false;
     detailStatus.hidden = true;
 }
+
 
 
 function updatePurchaseButton() {
