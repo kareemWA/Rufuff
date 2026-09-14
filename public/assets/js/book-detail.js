@@ -86,9 +86,7 @@ function renderBook(data) {
     setText(detailReadCount, `${data.readCount || 0} قراءة`);
     document.title = `${data.title} | رفوف`;
     renderComments(data.comments, data.averageRating);
-    updateFavoriteButton();
-    bookDetail.hidden = false;
-    detailStatus.hidden = true;
+   
 }
 
 
