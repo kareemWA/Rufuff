@@ -169,7 +169,9 @@ function clearSessionCookie(res) {
 }
 
 async function createBooksCollection() {
-    await Book.createCollection();
+    await Book.createCollection().catch(error => {
+        if (error.code !== 48) throw error;
+    });
     await Book.bulkWrite([
 
     ]);
