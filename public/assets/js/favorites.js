@@ -51,8 +51,9 @@ function renderFavorites() {
 
 async function initializeFavorites() {
     const library = await window.accountLibrary.load(currentUser);
-    cart = library.cart;
-    favorites = library.favorites;
+    cart = library?.cart || [];
+    favorites = library?.favorites || [];
+
     renderFavorites();
 }
 
