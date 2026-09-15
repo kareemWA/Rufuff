@@ -10,6 +10,7 @@ const detailOriginalPrice = document.getElementById("detailOriginalPrice");
 const detailDiscount = document.getElementById("detailDiscount");
 const detailRating = document.getElementById("detailRating");
 const detailReadCount = document.getElementById("detailReadCount");
+const purchaseStatus = document.getElementById("purchaseStatus");
 const reviewsSummary = document.getElementById("reviewsSummary");
 const commentsList = document.getElementById("commentsList");
 const commentForm = document.getElementById("commentForm");
@@ -105,6 +106,9 @@ function updatePurchaseButton() {
     buyButton.textContent = isFree ? "اقرأ مجانًا" : purchased ? "قراءة الكتاب" : pending ? "بانتظار تأكيد الدفع" : "أضف للسلة";
     buyButton.classList.toggle("is-purchased", purchased);
     buyButton.disabled = pending;
+    purchaseStatus.hidden = !purchased && !pending;
+    purchaseStatus.textContent = purchased ? "تم الشراء" : pending ? "بانتظار تأكيد الدفع" : "";
+    purchaseStatus.className = `purchase-status${purchased ? " success" : " pending"}`;
     downloadButton.hidden = !purchased;
     if (purchased) downloadButton.href = `${accessUrl}?download=1`;
 }
