@@ -137,6 +137,25 @@ function publicBook(book) {
     return { ...bookWithoutPdf, hasPdf: book.hasPdf ?? Boolean(pdfFile) };
 }
 
+function getKashierPaymentResult(data) {
+    return data?.payment || data?.data?.payment || data?.data || data || {};
+}
+
+function getKashierStatus(data) {
+    const result = getKashierPaymentResult(data);
+    return String(result.status || result.paymentStatus || result.paymentState || data?.status || "").toUpperCase();
+}
+
+function getKashierAmount(data) {
+    const result = getKashierPaymentResult(data);
+    return Number(result.amount ?? result.totalAmount ?? data?.amount);
+}
+
+function getKashierTransactionId(data) {
+    const result = getKashierPaymentResult(data);
+    return result.transactionId || result.transaction?.id || data?.transactionId || null;
+}
+
 async function findBookSummaries(filter = {}) {
     return Book.aggregate([
         { $match: filter },
@@ -848,6 +867,8 @@ app.post("/api/payments/create", async (req, res) => {
             || data.id
             || data.data?.sessionId
             || data.data?.id
+            || data.data?.session?.id
+            || data.data?.session?.sessionId
             || paymentUrl.match(/\/session\/([^/?]+)/)?.[1]
             || null;
         payment.kashierOrderReference = data.orderReference || data.data?.orderReference || orderReference;
@@ -873,13 +894,14 @@ app.get("/api/payments/:paymentId/status", requireUser, async (req, res) => {
             } catch {
                 data = {};
             }
-            const result = data.data || data;
-            const receivedAmount = Number(result.amount);
+            const result = getKashierPaymentResult(data);
+            const paymentStatus = getKashierStatus(data);
+            const receivedAmount = getKashierAmount(data);
             const amountMatches = receivedAmount === payment.amountCents
                 || receivedAmount === Number((payment.amountCents / 100).toFixed(2));
-            if (response.ok && result.status === "SUCCESS" && amountMatches) {
-                await completePayment(payment, result.transactionId);
-            } else if (response.ok && ["FAILURE", "FAILED"].includes(String(result.status).toUpperCase())) {
+            if (response.ok && paymentStatus === "SUCCESS" && amountMatches) {
+                await completePayment(payment, getKashierTransactionId(data));
+            } else if (response.ok && ["FAILURE", "FAILED", "DECLINED"].includes(paymentStatus)) {
                 payment.status = "failed";
                 payment.rejectionReason = result.transactionResponseMessage?.en || result.message || "لم تكتمل عملية الدفع";
                 await payment.save();
@@ -925,11 +947,12 @@ app.post("/api/payments/kashier/webhook", async (req, res) => {
             { _id: data.merchantOrderId }
         ] });
         if (!payment) return res.status(404).send("طلب الدفع غير موجود");
-        const receivedAmount = Number(data.amount);
+        const paymentStatus = getKashierStatus(data);
+        const receivedAmount = getKashierAmount(data);
         const amountMatches = receivedAmount === payment.amountCents || receivedAmount === Number((payment.amountCents / 100).toFixed(2));
-        if (data.status === "SUCCESS" && String(data.transactionResponseCode) === "00" && amountMatches) {
-            await completePayment(payment, data.transactionId);
-        } else if (data.status && data.status !== "SUCCESS" && payment.status === "pending") {
+        if (paymentStatus === "SUCCESS" && String(data.transactionResponseCode || data.data?.transactionResponseCode) === "00" && amountMatches) {
+            await completePayment(payment, getKashierTransactionId(data));
+        } else if (paymentStatus && paymentStatus !== "SUCCESS" && payment.status === "pending") {
             payment.status = "failed";
             payment.rejectionReason = data.transactionResponseMessage?.en || "لم تكتمل معاملة Kashier";
             await payment.save();
