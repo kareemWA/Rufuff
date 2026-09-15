@@ -812,10 +812,17 @@ app.post("/api/payments/create", async (req, res) => {
             },
             body: JSON.stringify(requestBody)
         });
-        const data = await response.json().catch(() => ({}));
+        const responseText = await response.text();
+        let data = {};
+        try {
+            data = responseText ? JSON.parse(responseText) : {};
+        } catch {
+            data = { message: responseText };
+        }
         if (!response.ok) {
             await Payment.deleteOne({ _id: payment._id, status: "pending" });
-            const kashierError = data.message || data.error?.message || data.error || data.errors?.[0]?.message;
+            const firstError = Array.isArray(data.errors) ? data.errors[0] : data.errors;
+            const kashierError = data.message || data.error?.message || data.error || firstError?.message || firstError || responseText;
             console.error("Kashier payment-link error:", response.status, data);
             return res.status(502).send(kashierError || "تعذر إنشاء رابط الدفع عبر Kashier");
         }
