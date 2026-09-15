@@ -143,12 +143,23 @@ function getKashierPaymentResult(data) {
 
 function getKashierStatus(data) {
     const result = getKashierPaymentResult(data);
-    return String(result.status || result.paymentStatus || result.paymentState || data?.status || "").toUpperCase();
+    return String(result.status || result.paymentStatus || result.paymentState || data?.status || "").trim().toUpperCase();
 }
 
 function getKashierAmount(data) {
     const result = getKashierPaymentResult(data);
-    return Number(result.amount ?? result.totalAmount ?? data?.amount);
+    return Number(result.amount ?? result.totalAmount ?? result.transactionAmount ?? data?.amount ?? data?.totalAmount);
+}
+
+function getKashierTransactionCode(data) {
+    const result = getKashierPaymentResult(data);
+    return String(result.transactionResponseCode || result.responseCode || data?.transactionResponseCode || data?.responseCode || "");
+}
+
+function isSuccessfulKashierPayment(data) {
+    const status = getKashierStatus(data);
+    return ["SUCCESS", "PAID", "CAPTURED", "COMPLETED", "APPROVED"].includes(status)
+        || getKashierTransactionCode(data) === "00";
 }
 
 function getKashierTransactionId(data) {
@@ -904,9 +915,9 @@ app.get("/api/payments/:paymentId/status", requireUser, async (req, res) => {
             const receivedAmount = getKashierAmount(data);
             const amountMatches = receivedAmount === payment.amountCents
                 || receivedAmount === Number((payment.amountCents / 100).toFixed(2));
-            if (response.ok && paymentStatus === "SUCCESS" && amountMatches) {
+            if (response.ok && isSuccessfulKashierPayment(data) && amountMatches) {
                 await completePayment(payment, getKashierTransactionId(data));
-            } else if (response.ok && ["FAILURE", "FAILED", "DECLINED"].includes(paymentStatus)) {
+            } else if (response.ok && ["FAILURE", "FAILED", "DECLINED", "CANCELLED", "CANCELED"].includes(paymentStatus)) {
                 payment.status = "failed";
                 payment.rejectionReason = result.transactionResponseMessage?.en || result.message || "لم تكتمل عملية الدفع";
                 await payment.save();
@@ -955,9 +966,9 @@ app.post("/api/payments/kashier/webhook", async (req, res) => {
         const paymentStatus = getKashierStatus(data);
         const receivedAmount = getKashierAmount(data);
         const amountMatches = receivedAmount === payment.amountCents || receivedAmount === Number((payment.amountCents / 100).toFixed(2));
-        if (paymentStatus === "SUCCESS" && String(data.transactionResponseCode || data.data?.transactionResponseCode) === "00" && amountMatches) {
+        if (isSuccessfulKashierPayment(data) && amountMatches) {
             await completePayment(payment, getKashierTransactionId(data));
-        } else if (paymentStatus && paymentStatus !== "SUCCESS" && payment.status === "pending") {
+        } else if (paymentStatus && !isSuccessfulKashierPayment(data) && payment.status === "pending") {
             payment.status = "failed";
             payment.rejectionReason = data.transactionResponseMessage?.en || "لم تكتمل معاملة Kashier";
             await payment.save();
