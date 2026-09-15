@@ -9,14 +9,34 @@
 
     function readLocal(name, email) {
         try {
-            return JSON.parse(localStorage.getItem(storageKey(name, email)) || "[]");
+            const value = JSON.parse(localStorage.getItem(storageKey(name, email)) || "[]");
+            if (name === "bookCart" || name === "favoriteBooks") {
+                return Array.isArray(value)
+                    ? value.map(book => typeof book === "string" ? { _id: book } : book).filter(Boolean)
+                    : [];
+            }
+            return value;
         } catch {
             return [];
         }
     }
 
     function writeLocal(name, value, email) {
-        localStorage.setItem(storageKey(name, email), JSON.stringify(value));
+        const key = storageKey(name, email);
+        const storedValue = name === "bookCart" || name === "favoriteBooks"
+            ? value.map(book => book?._id).filter(Boolean)
+            : value;
+        try {
+            localStorage.setItem(key, JSON.stringify(storedValue));
+            return true;
+        } catch (error) {
+            if (error?.name === "QuotaExceededError") {
+                localStorage.removeItem(key);
+                console.warn(`تعذر تخزين ${key} محليًا بسبب امتلاء مساحة المتصفح`);
+                return false;
+            }
+            throw error;
+        }
     }
 
     function readPaymentState(user) {
@@ -136,7 +156,7 @@
     }
 
     async function save(user, cart, favorites) {
-        if (!user?.email) return;
+        if (!user?.email) return false;
 
         writeLocal("bookCart", cart, user.email);
         writeLocal("favoriteBooks", favorites, user.email);
