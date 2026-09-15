@@ -886,7 +886,12 @@ app.get("/api/payments/:paymentId/status", requireUser, async (req, res) => {
         if (!payment) return res.status(404).send("طلب الدفع غير موجود");
         if (payment.status === "pending" && payment.kashierSessionId && KASHIER_PAYMENT_URL.includes("/v3/payment/sessions")) {
             const verifyUrl = `${KASHIER_PAYMENT_URL}/${encodeURIComponent(payment.kashierSessionId)}/payment`;
-            const response = await fetch(verifyUrl, { headers: { Authorization: KASHIER_SECRET_KEY } });
+            const response = await fetch(verifyUrl, {
+                headers: {
+                    Authorization: KASHIER_SECRET_KEY,
+                    "api-key": KASHIER_API_KEY
+                }
+            });
             const responseText = await response.text();
             let data = {};
             try {
