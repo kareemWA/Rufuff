@@ -207,9 +207,9 @@ function watchPaymentStatus(paymentId, submittedBooks) {
         if (checking) return;
         checking = true;
         try {
-            const response = await fetch("/api/payments/mine");
+            const response = await fetch(`/api/payments/${encodeURIComponent(paymentId)}/status`);
             if (!response.ok) return;
-            const payment = (await response.json()).find(item => item.id === paymentId);
+            const payment = await response.json();
             if (!payment || payment.status === "pending") return;
             window.accountLibrary.syncPaymentState(currentUser, [payment], submittedBooks);
             window.clearInterval(interval);

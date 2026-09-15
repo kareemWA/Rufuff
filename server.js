@@ -77,6 +77,7 @@ const paymentSchema = new mongoose.Schema({
     orderNumber: { type: Number, unique: true, default: () => Date.now() + Math.floor(Math.random() * 100000) },
     amountCents: { type: Number, required: true },
     status: { type: String, enum: ["pending", "paid", "failed"], default: "pending" },
+    kashierSessionId: { type: String, default: null, index: true },
     kashierOrderId: { type: String, default: null, index: true },
     kashierTransactionId: { type: String, default: null, index: true },
     kashierOrderReference: { type: String, default: null, index: true }
@@ -843,12 +844,55 @@ app.post("/api/payments/create", async (req, res) => {
             return res.status(502).send("استجابة Kashier لا تحتوي على رابط دفع");
         }
         payment.kashierOrderId = data.kashierOrderId || data.orderId || data.data?.kashierOrderId || null;
+        payment.kashierSessionId = data.sessionId
+            || data.id
+            || data.data?.sessionId
+            || data.data?.id
+            || paymentUrl.match(/\/session\/([^/?]+)/)?.[1]
+            || null;
         payment.kashierOrderReference = data.orderReference || data.data?.orderReference || orderReference;
         await payment.save();
         res.status(201).json({ paymentUrl, paymentId: String(payment._id), bookIds: books.map(book => String(book._id)) });
     } catch (error) {
         const clientError = /السلة|غير موجود|كود الخصم|الحد الأدنى|موجود بالفعل|قيد المراجعة/.test(error.message);
         res.status(clientError ? 400 : 500).send(error.message || "تعذر إنشاء طلب الدفع");
+    }
+});
+
+app.get("/api/payments/:paymentId/status", requireUser, async (req, res) => {
+    try {
+        const payment = await Payment.findOne({ _id: req.params.paymentId, userEmail: req.currentUser.email });
+        if (!payment) return res.status(404).send("طلب الدفع غير موجود");
+        if (payment.status === "pending" && payment.kashierSessionId && KASHIER_PAYMENT_URL.includes("/v3/payment/sessions")) {
+            const verifyUrl = `${KASHIER_PAYMENT_URL}/${encodeURIComponent(payment.kashierSessionId)}/payment`;
+            const response = await fetch(verifyUrl, { headers: { Authorization: KASHIER_SECRET_KEY } });
+            const responseText = await response.text();
+            let data = {};
+            try {
+                data = responseText ? JSON.parse(responseText) : {};
+            } catch {
+                data = {};
+            }
+            const result = data.data || data;
+            const receivedAmount = Number(result.amount);
+            const amountMatches = receivedAmount === payment.amountCents
+                || receivedAmount === Number((payment.amountCents / 100).toFixed(2));
+            if (response.ok && result.status === "SUCCESS" && amountMatches) {
+                await completePayment(payment, result.transactionId);
+            } else if (response.ok && ["FAILURE", "FAILED"].includes(String(result.status).toUpperCase())) {
+                payment.status = "failed";
+                payment.rejectionReason = result.transactionResponseMessage?.en || result.message || "لم تكتمل عملية الدفع";
+                await payment.save();
+            }
+        }
+        res.json({
+            id: String(payment._id),
+            status: payment.status,
+            rejectionReason: payment.rejectionReason,
+            bookIds: payment.bookIds.map(bookId => String(bookId))
+        });
+    } catch (error) {
+        res.status(500).send("تعذر التحقق من حالة الدفع");
     }
 });
 
