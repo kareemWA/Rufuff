@@ -48,7 +48,7 @@ function renderFavorites() {
         article.className = "purchased-card";
         // بناء محتوى البطاقة باستخدام بيانات الكتاب.
         article.innerHTML = `
-            <img class="purchased-cover" src="${book.image}" alt="غلاف كتاب ${book.title}">
+                <img class="purchased-cover" src="${book.image}" alt="غلاف كتاب ${book.title}" loading="lazy" decoding="async">
             <div class="purchased-card-info">
                 <span class="book-category">${book.category}</span>
                 <h2>${book.title}</h2>

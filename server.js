@@ -8,7 +8,6 @@ const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
 const dns = require("dns");
-const { Readable } = require("stream");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const app = express();
@@ -51,6 +50,8 @@ const bookSchema = new mongoose.Schema({
     deletedAt: { type: Date, default: null }
 }, { timestamps: true });
 bookSchema.index({ deletedAt: 1, createdAt: -1 });
+bookSchema.index({ title: 1 });
+bookSchema.index({ category: 1, deletedAt: 1, createdAt: -1 });
 
 const Book = mongoose.model("Book", bookSchema);
 
@@ -167,10 +168,14 @@ function getKashierTransactionId(data) {
     return result.transactionId || result.transaction?.id || data?.transactionId || null;
 }
 
-async function findBookSummaries(filter = {}) {
+async function findBookSummaries(filter = {}, options = {}) {
+    const skip = Math.max(0, Number(options.skip) || 0);
+    const limit = Math.min(100, Math.max(1, Number(options.limit) || 100));
     return Book.aggregate([
         { $match: filter },
         { $sort: { createdAt: -1 } },
+        { $skip: skip },
+        { $limit: limit },
         { $project: {
             title: 1,
             author: 1,
@@ -366,6 +371,20 @@ const authLimiter = rateLimit({
     legacyHeaders: false,
     message: "محاولات تسجيل كثيرة جدًا. حاول مرة أخرى بعد قليل."
 });
+const sensitiveApiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 60,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    message: "طلبات كثيرة جدًا لهذه العملية. حاول مرة أخرى بعد قليل."
+});
+const downloadLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 30,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    message: "تم تجاوز حد التحميل المؤقت. حاول مرة أخرى بعد قليل."
+});
 app.use("/api", apiLimiter);
 app.use(["/login", "/register"], authLimiter);
 
@@ -424,7 +443,21 @@ app.get("/api/categories", async (req, res) => {
 
 app.get("/api/books", async (req, res) => {
     try {
-        const books = await findBookSummaries({ deletedAt: null });
+        const page = Math.max(1, Number(req.query.page) || 1);
+        const limit = Math.min(40, Math.max(1, Number(req.query.limit) || 40));
+        const search = String(req.query.search || "").trim();
+        const category = String(req.query.category || "").trim();
+        const filter = { deletedAt: null };
+        if (category) filter.category = category;
+        if (search) {
+            const safeSearch = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            filter.$or = [
+                { title: { $regex: safeSearch, $options: "i" } },
+                { author: { $regex: safeSearch, $options: "i" } },
+                { category: { $regex: safeSearch, $options: "i" } }
+            ];
+        }
+        const books = await findBookSummaries(filter, { skip: (page - 1) * limit, limit });
         res.set("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
         res.json(books.map(publicBook));
     } catch (error) {
@@ -608,8 +641,7 @@ app.post("/api/admin/books", requireAdmin, async (req, res) => {
         if (!Number.isFinite(basePrice) || basePrice < 0) return res.status(400).send("السعر يجب أن يكون صفرًا أو أكبر");
         if (!Number.isFinite(discount)) return res.status(400).send("نسبة الخصم غير صحيحة");
         if (!normalizedCategory || !await Category.exists({ name: normalizedCategory })) return res.status(400).send("التصنيف غير موجود");
-        if (typeof cover !== "string" || !cover.trim()) return res.status(400).send("صورة الغلاف مطلوبة");
-        if (cover.startsWith("data:") && !/^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/i.test(cover)) return res.status(400).send("صيغة صورة الغلاف غير مدعومة");
+        if (typeof cover !== "string" || !/^https:\/\/[^\s]+$/i.test(cover.trim())) return res.status(400).send("رابط صورة الغلاف الخارجي عبر HTTPS مطلوب");
         if (file && !/^https:\/\/[^\s]+$/i.test(String(file).trim())) return res.status(400).send("رابط ملف PDF خارجي عبر HTTPS مطلوب");
         const finalPrice = Math.round(basePrice * (100 - discount) / 100 * 100) / 100;
         const book = await Book.create({ title, author, category: normalizedCategory, price: finalPrice, originalPrice: basePrice, discountPercent: discount, image: cover, pdfFile: file || null, description, seriesId: seriesId || null });
@@ -796,7 +828,7 @@ async function completePayment(payment, transactionId) {
     await Library.updateOne({ userEmail: payment.userEmail }, { $set: { cartBookIds: [] } });
 }
 
-app.post("/api/payments/create", async (req, res) => {
+app.post("/api/payments/create", sensitiveApiLimiter, async (req, res) => {
     try {
         const userEmail = getSessionEmail(req);
         if (!userEmail) return res.status(401).send("يجب تسجيل الدخول أولًا");
@@ -889,7 +921,7 @@ app.post("/api/payments/create", async (req, res) => {
     }
 });
 
-app.get("/api/payments/:paymentId/status", requireUser, async (req, res) => {
+app.get("/api/payments/:paymentId/status", sensitiveApiLimiter, requireUser, async (req, res) => {
     try {
         const payment = await Payment.findOne({ _id: req.params.paymentId, userEmail: req.currentUser.email });
         if (!payment) return res.status(404).send("طلب الدفع غير موجود");
@@ -977,7 +1009,7 @@ app.post("/api/payments/kashier/webhook", async (req, res) => {
     }
 });
 
-app.post("/api/purchases/free", async (req, res) => {
+app.post("/api/purchases/free", sensitiveApiLimiter, async (req, res) => {
     try {
         const userEmail = getSessionEmail(req);
         const { bookIds } = req.body;
@@ -1072,7 +1104,7 @@ app.get("/api/purchases", async (req, res) => {
     }
 });
 
-app.get("/api/books/:bookId/access", async (req, res) => {
+app.get("/api/books/:bookId/access", downloadLimiter, async (req, res) => {
     try {
         const book = await Book.findById(req.params.bookId).lean();
         if (!book || !book.pdfFile) return res.status(404).send("ملف PDF غير مرفوع لهذا الكتاب");
@@ -1083,27 +1115,8 @@ app.get("/api/books/:bookId/access", async (req, res) => {
             const purchase = await Purchase.findOne({ userEmail, bookId: req.params.bookId, status: "paid" });
             if (!purchase) return res.status(403).send("يجب شراء الكتاب أولًا");
         }
-        if (/^data:application\/pdf;base64,/i.test(book.pdfFile)) {
-            const pdfData = Buffer.from(book.pdfFile.split(",", 2)[1], "base64");
-            res.setHeader("Content-Type", "application/pdf");
-            if (req.query.download === "1") res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(`${book.title}.pdf`)}`);
-            return res.end(pdfData);
-        }
-        if (/^https?:\/\//i.test(book.pdfFile)) {
-            const pdfResponse = await fetch(book.pdfFile);
-            if (!pdfResponse.ok || !pdfResponse.body) return res.status(502).send("تعذر جلب ملف PDF");
-
-            res.setHeader("Content-Type", pdfResponse.headers.get("content-type") || "application/pdf");
-            if (req.query.download === "1") {
-                res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(`${book.title}.pdf`)}`);
-            }
-            Readable.fromWeb(pdfResponse.body).pipe(res);
-            return;
-        }
-        const pdfPath = path.join(__dirname, "digital-books", path.basename(book.pdfFile));
-        if (!fs.existsSync(pdfPath)) return res.status(404).send("ملف PDF غير موجود على السيرفر");
-        if (req.query.download === "1") return res.download(pdfPath, path.basename(pdfPath));
-        res.sendFile(pdfPath);
+        if (!/^https:\/\//i.test(book.pdfFile)) return res.status(410).send("ملف الكتاب يجب أن يكون على تخزين خارجي آمن");
+        res.redirect(book.pdfFile);
     } catch (error) {
         res.status(500).send("تعذر فتح الكتاب");
     }

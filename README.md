@@ -12,6 +12,10 @@ npm start
 
 يجب ضبط `MONGODB_URI` و`SESSION_SECRET` و`ADMIN_EMAIL` و`KASHIER_SECRET_KEY` و`KASHIER_MERCHANT_ID` في `.env`. الدفع يتم عبر رابط Kashier مستضاف، ويؤكد الخادم الطلب من خلال webhook عام مضبوط في `KASHIER_WEBHOOK_URL`. استخدم `https://test-api.kashier.io/v2/payment-link` للاختبار، وفي الإنتاج استخدم endpoint الذي توفره Kashier لحسابك. في الإنتاج يجب استخدام HTTPS، وقيمة سرية عشوائية، والسماح بعنوان الخادم في MongoDB Atlas.
 
+## تخزين الملفات
+
+لا ترفع ملفات PDF أو صور الأغلفة إلى هذا المشروع أو إلى MongoDB. استخدم Object Storage/CDN مثل S3 أو Cloudflare R2 أو Cloudinary، ثم ضع رابط HTTPS فقط في لوحة الإدارة. يجب أن يكون رابط PDF خاصًا أو Signed URL قصير الصلاحية؛ الخادم يتحقق من شراء المستخدم قبل إصدار الوصول، بينما نقل الملف يتم من مزود التخزين وليس من Vercel.
+
 ## الأمان
 
 - كلمات المرور تُخزن باستخدام `bcryptjs` ولا تعاد في أي استجابة. كلمات المرور القديمة تُرقّى إلى تشفير آمن عند أول دخول.
@@ -22,7 +26,7 @@ npm start
 
 ## مسارات رئيسية
 
-- الكتب: `GET /api/books?search=html&category=programming&series=<id>`
+- الكتب: `GET /api/books?search=html&category=programming&page=1&limit=40` (الحد الأقصى 40 كتابًا للطلب)
 - السلاسل: `GET /api/series` و`GET /api/series/:id`
 - المفضلة: `GET/POST/DELETE /api/favorites`
 - المكتبة والطلبات: `GET /api/library/owned` و`GET /api/orders`

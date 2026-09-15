@@ -17,7 +17,7 @@ function renderBook(book, purchase) {
     article.className = "purchased-card";
     const accessUrl = purchase.accessUrl;
     article.innerHTML = `
-        <img class="purchased-cover" src="${book.image}" alt="غلاف كتاب ${book.title}">
+        <img class="purchased-cover" src="${book.image}" alt="غلاف كتاب ${book.title}" loading="lazy" decoding="async">
         <div class="purchased-card-info">
             <span class="book-category">${book.category}</span>
             <h2>${book.title}</h2>
@@ -33,7 +33,7 @@ function renderPendingBook(book) {
     const article = document.createElement("article");
     article.className = "purchased-card";
     article.innerHTML = `
-        <img class="purchased-cover" src="${book.image}" alt="غلاف كتاب ${book.title}">
+        <img class="purchased-cover" src="${book.image}" alt="غلاف كتاب ${book.title}" loading="lazy" decoding="async">
         <div class="purchased-card-info">
             <span class="book-category">قيد المراجعة</span>
             <h2>${book.title}</h2>

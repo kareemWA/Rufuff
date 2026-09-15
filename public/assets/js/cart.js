@@ -77,7 +77,7 @@ function renderCart() {
         const item = document.createElement("article");
         item.className = "cart-item";
         item.innerHTML = `
-            <img src="${book.image}" alt="غلاف كتاب ${book.title}">
+            <img src="${book.image}" alt="غلاف كتاب ${book.title}" loading="lazy" decoding="async">
             <div class="cart-item-info">
                 <span class="book-category">${book.category}</span>
                 <h2>${book.title}</h2>
