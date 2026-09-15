@@ -3,6 +3,8 @@ const express = require("express");
 const helmet = require("helmet");
 const compression = require("compression");
 const { rateLimit } = require("express-rate-limit");
+const multer = require("multer");
+const { PutObjectCommand, S3Client } = require("@aws-sdk/client-s3");
 require("dotenv").config();
 const path = require("path");
 const fs = require("fs");
@@ -22,6 +24,29 @@ const SESSION_SECRET = process.env.SESSION_SECRET || (process.env.NODE_ENV === "
 const KASHIER_SECRET_KEY = process.env.KASHIER_SECRET_KEY || "";
 const KASHIER_API_KEY = process.env.KASHIER_API_KEY || "";
 const KASHIER_MERCHANT_ID = process.env.KASHIER_MERCHANT_ID || "";
+const STORAGE_ENDPOINT = process.env.STORAGE_ENDPOINT || "";
+const STORAGE_REGION = process.env.STORAGE_REGION || "auto";
+const STORAGE_BUCKET = process.env.STORAGE_BUCKET || "";
+const STORAGE_PUBLIC_BASE_URL = (process.env.STORAGE_PUBLIC_BASE_URL || "").replace(/\/$/, "");
+const storageClient = STORAGE_ENDPOINT && process.env.STORAGE_ACCESS_KEY_ID && process.env.STORAGE_SECRET_ACCESS_KEY
+    ? new S3Client({
+        endpoint: STORAGE_ENDPOINT,
+        region: STORAGE_REGION,
+        credentials: {
+            accessKeyId: process.env.STORAGE_ACCESS_KEY_ID,
+            secretAccessKey: process.env.STORAGE_SECRET_ACCESS_KEY
+        }
+    })
+    : null;
+const adminUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { files: 2, fileSize: 50 * 1024 * 1024 },
+    fileFilter: (req, file, callback) => {
+        const validCover = file.fieldname === "coverFile" && /^image\/(png|jpe?g|webp|avif)$/i.test(file.mimetype);
+        const validPdf = file.fieldname === "fileUpload" && file.mimetype === "application/pdf";
+        callback(null, validCover || validPdf);
+    }
+});
 const configuredKashierPaymentUrl = process.env.KASHIER_PAYMENT_URL || "";
 const KASHIER_PAYMENT_URL = configuredKashierPaymentUrl.includes("/v3/payment/sessions")
     ? configuredKashierPaymentUrl
@@ -561,6 +586,45 @@ app.post("/api/admin/categories", requireAdmin, async (req, res) => {
         res.status(201).json({ id: String(category._id), name: category.name, bookCount: 0 });
     } catch (error) {
         res.status(error.code === 11000 ? 409 : 400).send(error.code === 11000 ? "التصنيف موجود بالفعل" : "تعذر إضافة التصنيف");
+    }
+});
+
+async function uploadToObjectStorage(file, folder) {
+    if (!storageClient || !STORAGE_BUCKET || !STORAGE_PUBLIC_BASE_URL) {
+        throw new Error("لم يتم إعداد Object Storage على الخادم");
+    }
+    const extension = file.mimetype === "application/pdf"
+        ? "pdf"
+        : file.mimetype.split("/")[1].replace("jpeg", "jpg");
+    const key = `${folder}/${Date.now()}-${crypto.randomUUID()}.${extension}`;
+    await storageClient.send(new PutObjectCommand({
+        Bucket: STORAGE_BUCKET,
+        Key: key,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+        CacheControl: "public, max-age=31536000, immutable"
+    }));
+    return `${STORAGE_PUBLIC_BASE_URL}/${key.split("/").map(encodeURIComponent).join("/")}`;
+}
+
+app.post("/api/admin/uploads", requireAdmin, (req, res, next) => {
+    adminUpload.fields([{ name: "coverFile", maxCount: 1 }, { name: "fileUpload", maxCount: 1 }])(req, res, error => {
+        if (error) return res.status(400).send(error.code === "LIMIT_FILE_SIZE" ? "حجم الملف كبير جدًا" : "ملف غير صالح");
+        next();
+    });
+}, async (req, res) => {
+    try {
+        const coverFile = req.files?.coverFile?.[0];
+        const pdfFile = req.files?.fileUpload?.[0];
+        if (!coverFile && !pdfFile) return res.status(400).send("اختر صورة الغلاف أو ملف PDF");
+        const [cover, file] = await Promise.all([
+            coverFile ? uploadToObjectStorage(coverFile, "covers") : null,
+            pdfFile ? uploadToObjectStorage(pdfFile, "books") : null
+        ]);
+        res.status(201).json({ cover, file });
+    } catch (error) {
+        console.error("Object Storage upload error:", error.message);
+        res.status(503).send(error.message || "تعذر رفع الملفات إلى Object Storage");
     }
 });
 

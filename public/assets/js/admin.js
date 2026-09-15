@@ -59,7 +59,23 @@ async function submitForm(form, url) {
         try {
             const data = Object.fromEntries(new FormData(form));
             if (form.id === "bookForm") {
-                if (!data.cover) throw new Error("أدخل رابط صورة الغلاف من CDN");
+                const coverFile = data.coverFile;
+                const pdfFile = data.fileUpload;
+                if (coverFile?.size > 4 * 1024 * 1024) throw new Error("صورة الغلاف يجب ألا تتجاوز 4 ميجابايت");
+                if (pdfFile?.size > 50 * 1024 * 1024) throw new Error("ملف PDF يجب ألا يتجاوز 50 ميجابايت");
+                if (coverFile?.size || pdfFile?.size) {
+                    const uploadData = new FormData();
+                    if (coverFile?.size) uploadData.append("coverFile", coverFile);
+                    if (pdfFile?.size) uploadData.append("fileUpload", pdfFile);
+                    const uploadResponse = await fetch("/api/admin/uploads", { method: "POST", body: uploadData });
+                    if (!uploadResponse.ok) throw new Error(await uploadResponse.text());
+                    const uploaded = await uploadResponse.json();
+                    data.cover = uploaded.cover || data.cover;
+                    data.file = uploaded.file || data.file;
+                }
+                delete data.coverFile;
+                delete data.fileUpload;
+                if (!data.cover) throw new Error("اختر صورة الغلاف أو أدخل رابطها");
             }
             await request(url, { method: "POST", body: JSON.stringify(data) });
             form.reset();
@@ -68,18 +84,6 @@ async function submitForm(form, url) {
         } catch (error) {
             showMessage(error.message || "تعذر الحفظ", true);
         }
-    });
-}
-
-function readFileAsDataUrl(file, label, maxSize, typePattern) {
-    if (!file || !file.size) return Promise.resolve("");
-    if (file.size > maxSize) return Promise.reject(new Error(`${label} يجب ألا يتجاوز ${Math.round(maxSize / 1024 / 1024)} ميجابايت`));
-    if (!typePattern.test(file.type)) return Promise.reject(new Error(`${label} بصيغة غير مدعومة`));
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = () => reject(new Error(`تعذر قراءة ${label}`));
-        reader.readAsDataURL(file);
     });
 }
 
