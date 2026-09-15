@@ -258,7 +258,7 @@ async function refreshPurchasedBooks(visibleBooks) {
         message.className = "book-message success";
         if (book.hasPdf ?? Boolean(book.pdfFile)) {
             const accessUrl = `/api/books/${encodeURIComponent(book._id)}/access`;
-            message.innerHTML = `<button class="btn buy-book"  href="${accessUrl}" target="_blank">اقرأ الكتاب</button> · <button href="${accessUrl}?download=1" target="_blank">تحميل PDF</button>`;
+            message.innerHTML = `<button class="btn buy-book"  href="${accessUrl}" target="_blank">اقرأ الكتاب</button> · <button class="btn buy-book" href="${accessUrl}?download=1" target="_blank">تحميل PDF</button>`;
         }
     });
 }
