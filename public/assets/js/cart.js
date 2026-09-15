@@ -201,7 +201,11 @@ submitPayment.addEventListener("click", async () => {
 });
 
 function watchPaymentStatus(paymentId, submittedBooks) {
-    const interval = window.setInterval(async () => {
+    let attempts = 0;
+    let checking = false;
+    const checkPayment = async () => {
+        if (checking) return;
+        checking = true;
         try {
             const response = await fetch("/api/payments/mine");
             if (!response.ok) return;
@@ -213,20 +217,34 @@ function watchPaymentStatus(paymentId, submittedBooks) {
                 cart = [];
                 await window.accountLibrary.save(currentUser, [], favorites);
                 renderCart();
-                cartMessage.textContent = "تم تأكيد دفع الكتب. أصبحت كتبك متاحة الآن دون إعادة تحميل.";
+                cartMessage.textContent = "تم الدفع بنجاح. تم فتح كتبك المشتراة.";
                 cartMessage.className = "form-message success";
+                window.setTimeout(() => { window.location.href = "purchased.html"; }, 700);
                 return;
             }
             cart = submittedBooks;
             await window.accountLibrary.save(currentUser, cart, favorites);
             renderCart();
-            showPaymentToast(`تم رفض الدفع. السبب: ${payment.rejectionReason || "الإيصال غير صحيح أو لم يتم تحويل المبلغ المحدد"}. يمكنك إعادة المحاولة.`, true);
-            cartMessage.textContent = "تمت إعادة الكتاب إلى السلة ويمكنك إعادة المحاولة.";
+            showPaymentToast(`فشلت عملية الدفع. السبب: ${payment.rejectionReason || "لم يتم تأكيد العملية"}. يمكنك المحاولة مرة أخرى.`, true);
+            cartMessage.textContent = "فشلت عملية الدفع، وتمت إعادة الكتب إلى السلة.";
             cartMessage.className = "form-message error";
         } catch (error) {
             // Keep the local pending state and retry on the next interval.
+        } finally {
+            checking = false;
         }
-    }, 15000);
+    };
+    const interval = window.setInterval(() => {
+        attempts += 1;
+        if (attempts >= 40) {
+            window.clearInterval(interval);
+            cartMessage.textContent = "لم يصل تأكيد الدفع بعد. ستبقى الكتب في السلة حتى يصل التأكيد.";
+            cartMessage.className = "form-message error";
+            return;
+        }
+        checkPayment();
+    }, 3000);
+    checkPayment();
 }
 
 async function initializeCart() {

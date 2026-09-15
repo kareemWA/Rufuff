@@ -794,6 +794,7 @@ app.post("/api/payments/create", async (req, res) => {
                 order: orderReference,
                 merchantId: KASHIER_MERCHANT_ID,
                 merchantRedirect: redirectUrl,
+                serverWebhook: process.env.KASHIER_WEBHOOK_URL || `${origin}/api/payments/kashier/webhook`,
                 display: "ar",
                 type: "one-time",
                 customer: { email: userEmail, reference: userEmail }
@@ -855,7 +856,24 @@ app.post("/api/payments/kashier/webhook", async (req, res) => {
     try {
         const payload = req.body?.payload || req.body;
         const data = payload?.data || {};
-        if (KASHIER_MERCHANT_ID && req.body?.merchantId && req.body.merchantId !== KASHIER_MERCHANT_ID) return res.status(401).send("معرّف التاجر غير صحيح");
+        const signature = req.get("x-kashier-signature");
+        const signatureKeys = Array.isArray(data.signatureKeys) ? [...data.signatureKeys].sort() : [];
+        const signaturePayload = signatureKeys
+            .filter(key => Object.prototype.hasOwnProperty.call(data, key))
+            .map(key => `${key}=${encodeURIComponent(data[key])}`)
+            .join("&");
+        const expectedSignature = signaturePayload && KASHIER_API_KEY
+            ? crypto.createHmac("sha256", KASHIER_API_KEY).update(signaturePayload).digest("hex")
+            : "";
+        const receivedSignature = Buffer.from(String(signature || "").toLowerCase());
+        const expectedSignatureBuffer = Buffer.from(expectedSignature);
+        const signaturesMatch = receivedSignature.length === expectedSignatureBuffer.length
+            && expectedSignatureBuffer.length > 0
+            && crypto.timingSafeEqual(receivedSignature, expectedSignatureBuffer);
+        if (!signaturesMatch) {
+            return res.status(401).send("توقيع Kashier غير صحيح");
+        }
+        if (KASHIER_MERCHANT_ID && data.merchantId && data.merchantId !== KASHIER_MERCHANT_ID) return res.status(401).send("معرّف التاجر غير صحيح");
         const identifiers = [data.kashierOrderId, data.orderReference, data.merchantOrderId].filter(Boolean);
         const payment = await Payment.findOne({ $or: [
             { kashierOrderId: { $in: identifiers } },
@@ -863,7 +881,9 @@ app.post("/api/payments/kashier/webhook", async (req, res) => {
             { _id: data.merchantOrderId }
         ] });
         if (!payment) return res.status(404).send("طلب الدفع غير موجود");
-        if (data.status === "SUCCESS" && String(data.transactionResponseCode) === "00" && Number(data.amount) === Number((payment.amountCents / 100).toFixed(2))) {
+        const receivedAmount = Number(data.amount);
+        const amountMatches = receivedAmount === payment.amountCents || receivedAmount === Number((payment.amountCents / 100).toFixed(2));
+        if (data.status === "SUCCESS" && String(data.transactionResponseCode) === "00" && amountMatches) {
             await completePayment(payment, data.transactionId);
         } else if (data.status && data.status !== "SUCCESS" && payment.status === "pending") {
             payment.status = "failed";
