@@ -1,6 +1,7 @@
 (() => {
     let saveQueue = Promise.resolve();
     let booksCache = null;
+    const localStorageMaxBytes = 200000;
 
     function storageKey(name, email) {
         const normalizedEmail = (email || "guest").trim().toLowerCase();
@@ -26,8 +27,14 @@
         const storedValue = name === "bookCart" || name === "favoriteBooks"
             ? value.map(book => book?._id).filter(Boolean)
             : value;
+        const serialized = JSON.stringify(storedValue);
+        if (serialized.length > localStorageMaxBytes) {
+            localStorage.removeItem(key);
+            console.warn(`تم تجاوز الحد الأقصى للتخزين المحلي: ${key}`);
+            return false;
+        }
         try {
-            localStorage.setItem(key, JSON.stringify(storedValue));
+            localStorage.setItem(key, serialized);
             return true;
         } catch (error) {
             if (error?.name === "QuotaExceededError") {
@@ -56,7 +63,14 @@
     function readPaymentState(user) {
         if (!user?.email) return { records: {}, statuses: {} };
         try {
-            return JSON.parse(localStorage.getItem(storageKey("paymentState", user.email)) || '{"records":{},"statuses":{}}');
+            const state = JSON.parse(localStorage.getItem(storageKey("paymentState", user.email)) || '{"records":{},"statuses":{}}');
+            state.records = Object.fromEntries(Object.entries(state.records || {}).map(([id, record]) => [id, {
+                bookId: String(record.bookId || record.book?._id || id),
+                status: record.status,
+                paymentId: record.paymentId,
+                rejectionReason: record.rejectionReason || null
+            }]));
+            return state;
         } catch {
             return { records: {}, statuses: {} };
         }
@@ -66,18 +80,10 @@
         if (user?.email) writeLocal("paymentState", state, user.email);
     }
 
-    function paymentBook(book) {
-        if (!book) return book;
-        const storedBook = { ...book };
-        if (typeof storedBook.image === "string" && storedBook.image.length > 100000) delete storedBook.image;
-        delete storedBook.pdfFile;
-        return storedBook;
-    }
-
     function savePaymentRequest(user, books, paymentId) {
         const state = readPaymentState(user);
         books.forEach(book => {
-            state.records[String(book._id)] = { book: paymentBook(book), status: "pending", paymentId };
+            state.records[String(book._id)] = { bookId: String(book._id), status: "pending", paymentId };
         });
         if (paymentId) {
             state.statuses[paymentId] = "pending";
@@ -88,7 +94,6 @@
 
     function syncPaymentState(user, payments, books = []) {
         const state = readPaymentState(user);
-        const booksById = new Map(books.map(book => [String(book._id), book]));
         const latestPaymentsByBook = new Map();
         [...payments].sort((left, right) => new Date(left.createdAt || 0) - new Date(right.createdAt || 0)).forEach(payment => {
             state.statuses[payment.id] = payment.status;
@@ -97,18 +102,17 @@
             });
         });
         latestPaymentsByBook.forEach((payment, id) => {
-            const previous = state.records[id] || {};
             state.records[id] = {
-                ...previous,
-                book: paymentBook(booksById.get(id) || previous.book),
+                bookId: id,
                 status: payment.status,
                 paymentId: payment.id,
                 rejectionReason: payment.rejectionReason || null
             };
         });
         if (books.length) {
+            const bookIds = new Set(books.map(book => String(book._id)));
             Object.keys(state.records).forEach(id => {
-                if (!booksById.has(id)) delete state.records[id];
+                if (!bookIds.has(id)) delete state.records[id];
             });
         }
         writeLocalValue("paymentStatuses", state.statuses);
@@ -119,7 +123,7 @@
     function markPaymentRecord(user, book, status) {
         const state = readPaymentState(user);
         const id = String(book._id);
-        state.records[id] = { ...(state.records[id] || {}), book: paymentBook(book), status, rejectionReason: null };
+        state.records[id] = { bookId: id, status, rejectionReason: null };
         writePaymentState(user, state);
     }
 

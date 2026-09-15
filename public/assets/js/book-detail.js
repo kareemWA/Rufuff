@@ -28,10 +28,9 @@ let pending = false;
 let accessUrl = "";
 let cart = [];
 let favorites = [];
-const bookCacheKey = `book:${bookId}`;
 const commentsCacheKey = `book-comments:${bookId}`;
-const bookCacheTtl = 5 * 60 * 1000;
 const commentsCacheTtl = 15 * 1000;
+const commentsCacheMaxBytes = 100000;
 
 function redirectGuest(event) {
     if (currentUser?.email) return false;
@@ -127,31 +126,12 @@ favoriteButton.addEventListener("click", async event => {
 
 async function loadBook() {
     if (!bookId) throw new Error("رابط الكتاب غير صحيح");
-    let cachedBook = null;
-    try {
-        const cached = JSON.parse(localStorage.getItem(bookCacheKey) || "null");
-        if (cached?.book && Date.now() - cached.cachedAt < bookCacheTtl) cachedBook = cached.book;
-    } catch {
-        localStorage.removeItem(bookCacheKey);
-    }
-
     const bookResponse = fetch(`/api/books/${encodeURIComponent(bookId)}`, { cache: "no-store" })
         .then(response => {
             if (!response.ok) throw new Error("تعذر تحميل تفاصيل الكتاب");
             return response.json();
         });
-    if (cachedBook) renderBook(cachedBook);
     const freshBook = await bookResponse;
-    const cachedBookValue = JSON.stringify({ cachedAt: Date.now(), book: freshBook });
-    if (cachedBookValue.length <= 300000) {
-        try {
-            localStorage.setItem(bookCacheKey, cachedBookValue);
-        } catch {
-            localStorage.removeItem(bookCacheKey);
-        }
-    } else {
-        localStorage.removeItem(bookCacheKey);
-    }
     renderBook(freshBook);
 
     loadComments();
@@ -184,7 +164,14 @@ async function loadComments(force = false) {
     const response = await fetch(`/api/books/${encodeURIComponent(bookId)}/comments`);
     if (!response.ok) return;
     const data = await response.json();
-    localStorage.setItem(commentsCacheKey, JSON.stringify({ cachedAt: Date.now(), data }));
+    const serialized = JSON.stringify({ cachedAt: Date.now(), data });
+    if (serialized.length <= commentsCacheMaxBytes) {
+        try {
+            localStorage.setItem(commentsCacheKey, serialized);
+        } catch (error) {
+            if (error?.name === "QuotaExceededError") localStorage.removeItem(commentsCacheKey);
+        }
+    }
     renderComments(data.comments, data.averageRating);
 }
 

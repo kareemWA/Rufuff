@@ -610,8 +610,7 @@ app.post("/api/admin/books", requireAdmin, async (req, res) => {
         if (!normalizedCategory || !await Category.exists({ name: normalizedCategory })) return res.status(400).send("التصنيف غير موجود");
         if (typeof cover !== "string" || !cover.trim()) return res.status(400).send("صورة الغلاف مطلوبة");
         if (cover.startsWith("data:") && !/^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/i.test(cover)) return res.status(400).send("صيغة صورة الغلاف غير مدعومة");
-        if (typeof file === "string" && file.startsWith("data:") && !/^data:application\/pdf;base64,[A-Za-z0-9+/=]+$/i.test(file)) return res.status(400).send("صيغة ملف الكتاب غير مدعومة");
-        if (typeof file === "string" && file.length > 8 * 1024 * 1024) return res.status(413).send("ملف الكتاب كبير جدًا، الحد الأقصى 6 ميجابايت");
+        if (file && !/^https:\/\/[^\s]+$/i.test(String(file).trim())) return res.status(400).send("رابط ملف PDF خارجي عبر HTTPS مطلوب");
         const finalPrice = Math.round(basePrice * (100 - discount) / 100 * 100) / 100;
         const book = await Book.create({ title, author, category: normalizedCategory, price: finalPrice, originalPrice: basePrice, discountPercent: discount, image: cover, pdfFile: file || null, description, seriesId: seriesId || null });
         res.status(201).json(book);

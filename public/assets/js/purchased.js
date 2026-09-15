@@ -88,7 +88,12 @@ async function loadPurchasedBooks(notify = false) {
             if (changedPayment?.status === "paid") showPaymentToast("تم تأكيد دفع الكتب. أصبحت كتبك متاحة الآن.");
             if (changedPayment?.status === "failed") showPaymentToast(`تم رفض الدفع. السبب: ${changedPayment.rejectionReason || "الإيصال غير صحيح أو لم يتم تحويل المبلغ المحدد"}`, true);
         }
-        localStorage.setItem("paymentStatuses", JSON.stringify(paymentStatuses));
+        try {
+            const serializedStatuses = JSON.stringify(paymentStatuses);
+            if (serializedStatuses.length <= 100000) localStorage.setItem("paymentStatuses", serializedStatuses);
+        } catch (error) {
+            if (error?.name === "QuotaExceededError") localStorage.removeItem("paymentStatuses");
+        }
         const response = await fetch("/api/purchased-books");
         if (!response.ok) throw new Error("تعذر تحميل الكتب");
         const books = await response.json();

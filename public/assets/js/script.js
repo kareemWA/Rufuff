@@ -22,6 +22,23 @@ let categoryButtons = [];
 let purchaseState = null;
 const booksCacheKey = "booksCache";
 const categoriesCacheKey = "categoriesCache";
+const localStorageMaxBytes = 200000;
+
+function safeLocalStorageSet(key, value) {
+    const serialized = JSON.stringify(value);
+    if (serialized.length > localStorageMaxBytes) return false;
+    try {
+        localStorage.setItem(key, serialized);
+        return true;
+    } catch (error) {
+        if (error?.name === "QuotaExceededError") {
+            localStorage.removeItem(key);
+            console.warn(`تعذر تخزين ${key} محليًا بسبب امتلاء مساحة المتصفح`);
+            return false;
+        }
+        throw error;
+    }
+}
 
 function escapeHtml(value) {
     return String(value ?? "").replace(/[&<>'"]/g, character => ({
@@ -243,7 +260,7 @@ async function refreshPurchasedBooks(visibleBooks) {
         const message = card.querySelector(".book-message");
         if (isPending) {
             if (button) button.remove();
-            message.textContent = "يوجد مشكله في عمله الشراء اذا لم يتم حلها في غضون ساعه تواصل مع 01016355675";
+            message.textContent = "تم إرسال الإيصال، والكتاب بانتظار تأكيد الدفع.";
             message.className = "book-message pending";
             return;
         }
@@ -258,7 +275,8 @@ async function refreshPurchasedBooks(visibleBooks) {
         message.className = "book-message success";
         if (book.hasPdf ?? Boolean(book.pdfFile)) {
             const accessUrl = `/api/books/${encodeURIComponent(book._id)}/access`;
-            message.innerHTML = `<a class="btn read-book-link" href="reader.html?id=${encodeURIComponent(book._id)}" >اقرأ الكتاب</a> · <a  href="${accessUrl}?download=1" target="_blank">تحميل PDF</a>`;
+            const readerUrl = `reader.html?id=${encodeURIComponent(book._id)}`;
+            message.innerHTML = `<a class="btn read-book-link" href="${readerUrl}">اقرأ الكتاب</a> <span aria-hidden="true">·</span> <a href="${accessUrl}?download=1" target="_blank" rel="noopener">تحميل PDF</a>`;
         }
     });
 }
@@ -272,25 +290,12 @@ async function loadBooks() {
     }
 
     try {
-        const cachedValue = JSON.parse(localStorage.getItem(booksCacheKey) || "null");
-        const cachedBooks = Array.isArray(cachedValue) ? cachedValue : cachedValue?.books;
-        if ((!books.length || !sharedBooks?.length) && Array.isArray(cachedBooks) && cachedBooks.length) {
-            books = sortBooksNewestFirst(cachedBooks);
-            if (booksStatus) booksStatus.remove();
-            renderBooks();
-        }
-    } catch (error) {
-        localStorage.removeItem("booksCache");
-    }
-
-    try {
         const response = await fetch("/api/books");
         if (!response.ok) throw new Error("تعذر تحميل الكتب");
         const freshBooks = sortBooksNewestFirst(await response.json());
         const currentSignature = books.map(book => `${book._id}:${book.updatedAt || ""}`).join("|");
         const freshSignature = freshBooks.map(book => `${book._id}:${book.updatedAt || ""}`).join("|");
         books = freshBooks;
-        localStorage.setItem(booksCacheKey, JSON.stringify({ cachedAt: Date.now(), books }));
         if (booksStatus) booksStatus.remove();
         if (currentSignature !== freshSignature) renderBooks();
         return books;
@@ -341,7 +346,7 @@ async function loadCategories() {
         const response = await fetch("/api/categories");
         if (!response.ok) throw new Error("تعذر تحميل التصنيفات");
         const categories = await response.json();
-        localStorage.setItem(categoriesCacheKey, JSON.stringify(categories));
+        safeLocalStorageSet(categoriesCacheKey, categories);
         renderCategories(categories);
     } catch (error) {
         renderCategories([]);
@@ -371,7 +376,7 @@ async function checkPaymentConfirmation() {
     const changedPayment = payments.find(payment => previous[payment.id] === "pending" && ["paid", "failed"].includes(payment.status));
     if (changedPayment?.status === "paid") showPaymentToast("تم تأكيد دفع الكتب. أصبحت كتبك متاحة الآن.");
     if (changedPayment?.status === "failed") showPaymentToast(`تم رفض الدفع. السبب: ${changedPayment.rejectionReason || "الإيصال غير صحيح أو لم يتم تحويل المبلغ المحدد"}`, true);
-    localStorage.setItem("paymentStatuses", JSON.stringify(statuses));
+    safeLocalStorageSet("paymentStatuses", statuses);
 }
 
 checkPaymentConfirmation().catch(() => {});
