@@ -48,8 +48,8 @@ function setText(element, value) {
 
 function renderComments(comments, averageRating) {
     const count = comments.length;
-    setText(reviewsSummary, count ? `${averageRating} من 5 · ${count} تقييم` : "لا توجد تقييمات بعد");
-    setText(detailRating, count ? `★ ${averageRating} · ${count} تقييم` : "☆ لا توجد تقييمات");
+    setText(reviewsSummary, count ? `${count} تعليق` : "لا توجد تعليقات بعد");
+    setText(detailRating, count ? `${count} تعليق` : "لا توجد تعليقات");
     commentsList.innerHTML = "";
 
     if (!count) {
@@ -65,10 +65,7 @@ function renderComments(comments, averageRating) {
         header.className = "comment-header";
         const name = document.createElement("strong");
         name.textContent = comment.userName;
-        const rating = document.createElement("span");
-        rating.className = "comment-rating";
-        rating.textContent = `${"★".repeat(comment.rating)}${"☆".repeat(5 - comment.rating)}`;
-        header.append(name, rating);
+        header.append(name);
 
         const text = document.createElement("p");
         text.textContent = comment.text;
@@ -88,7 +85,7 @@ function renderBook(data) {
     setText(detailPrice, `${data.price} جنيه`);
     setText(detailOriginalPrice, `${data.originalPrice || data.price} جنيه`);
     setText(detailDiscount, `خصم ${data.discountPercent || 0}%`);
-    setText(detailRating, data.reviewsCount ? `★ ${data.averageRating}` : "☆ 0");
+    setText(detailRating, "جاري تحميل التعليقات...");
     setText(detailReadCount, `${data.readCount || 0} قراءة`);
     document.title = `${data.title} | رفوف`;
     updateFavoriteButton();
@@ -212,25 +209,24 @@ buyButton.addEventListener("click", async event => {
 commentForm.addEventListener("submit", async event => {
     event.preventDefault();
     if (!currentUser?.email) {
-        commentMessage.textContent = "سجل الدخول أولًا لإضافة تقييم.";
+        commentMessage.textContent = "سجل الدخول أولًا لإضافة تعليق.";
         commentMessage.className = "form-message error";
         return;
     }
 
-    const rating = document.getElementById("rating").value;
     const text = document.getElementById("commentText").value.trim();
     const submitButton = commentForm.querySelector("button[type=submit]");
     submitButton.disabled = true;
-    commentMessage.textContent = "جارٍ نشر التقييم...";
+    commentMessage.textContent = "جارٍ نشر التعليق...";
     try {
         const response = await fetch(`/api/books/${encodeURIComponent(bookId)}/comments`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userEmail: currentUser.email, rating, text })
+            body: JSON.stringify({ text })
         });
         if (!response.ok) throw new Error(await response.text());
         commentForm.reset();
-        commentMessage.textContent = "تم نشر تقييمك بنجاح.";
+        commentMessage.textContent = "تم نشر تعليقك بنجاح.";
         commentMessage.className = "form-message success";
         await loadComments(true);
     } catch (error) {

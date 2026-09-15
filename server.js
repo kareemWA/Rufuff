@@ -91,7 +91,7 @@ const commentSchema = new mongoose.Schema({
     userEmail: { type: String, required: true },
     userName: { type: String, required: true },
 
-    rating: { type: Number, required: true, min: 1, max: 5 },
+    rating: { type: Number, min: 1, max: 5 },
     text: { type: String, required: true, trim: true, maxlength: 1000 }
 }, { timestamps: true });
 commentSchema.index({ bookId: 1, createdAt: -1 });
@@ -738,9 +738,9 @@ app.post("/api/books/:bookId/read", requireUser, async (req, res) => {
 app.post("/api/books/:bookId/comments", async (req, res) => {
     try {
         const userEmail = getSessionEmail(req);
-        const { rating, text } = req.body;
+        const { text } = req.body;
         if (!userEmail) return res.status(401).send("يجب تسجيل الدخول أولًا");
-        if (!rating || !text?.trim()) return res.status(400).send("اكتب التقييم والتعليق أولًا");
+        if (!text?.trim()) return res.status(400).send("اكتب التعليق أولًا");
 
         const user = await User.findOne({ email: userEmail }).lean();
         if (!user) return res.status(401).send("يجب تسجيل الدخول أولًا");
@@ -752,7 +752,6 @@ app.post("/api/books/:bookId/comments", async (req, res) => {
             bookId: book._id,
             userEmail,
             userName: user.name,
-            rating: Number(rating),
             text: text.trim()
         });
 

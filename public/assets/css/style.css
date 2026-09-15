@@ -132,7 +132,7 @@ body.dark-mode .welcome { background: linear-gradient(120deg, #29453a, #3d3b2f);
 .purchase-status.pending { color: var(--accent); }
 .favorite-detail { display: block; margin: 0 0 14px auto; border: 1px solid var(--border); border-radius: 20px; padding: 7px 12px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; }
 .favorite-detail.is-favorite { border-color: rgba(200, 135, 75, .4); background: rgba(200, 135, 75, .12); color: var(--accent); }
-.detail-rating, .comment-rating { color: var(--accent); font-weight: 700; }
+.detail-rating { color: var(--accent); font-weight: 700; }
 .detail-info .btn { width: auto; min-width: 150px; }
 .reviews-section { margin-top: 34px; padding: clamp(22px, 4vw, 38px); border: 1px solid var(--border); border-radius: 20px; background: var(--surface); }
 .reviews-heading h2 { margin: 0; font-family: Georgia, serif; font-size: 28px; font-weight: 400; }
@@ -155,9 +155,18 @@ body.dark-mode .welcome { background: linear-gradient(120deg, #29453a, #3d3b2f);
     .book-detail-main { margin-top: 24px; }
     .book-detail-hero { grid-template-columns: 1fr; gap: 20px; padding: 16px; }
     .detail-cover-wrap { width: min(210px, 72vw); margin: auto; padding: 8px; }
-    .detail-info h1 { font-size: 32px; }
-    .detail-description { margin: 18px 0; line-height: 1.75; }
+    .detail-info h1 { font-size: 26px; }
+    .detail-author, .detail-description { font-size: 12px; }
+    .detail-description { margin: 16px 0; line-height: 1.7; }
+    .detail-meta { gap: 8px; margin-bottom: 14px; }
+    .detail-price { font-size: 18px; }
+    .detail-rating, .purchase-status { font-size: 11px; }
+    .favorite-detail, .detail-info .btn { font-size: 11px; }
     .reviews-section { margin-top: 22px; padding: 16px; }
+    .reviews-heading h2 { font-size: 22px; }
+    .reviews-heading p, .comment-form label, .comment-item p { font-size: 11px; }
+    .comment-form h3 { font-size: 15px; }
+    .comment-form textarea { min-height: 90px; font-size: 12px; }
 }
 
 @media (max-width: 900px) { .header { flex-wrap: wrap; } .btn-open-list { display: inline-flex; align-items: center; justify-content: center; } .search_bar { order: 3; width: 100%; } .list, .list_bottom { right: 0; left: auto; width: min(320px, calc(100vw - 18px)); max-height: none; overflow-y: auto; border-width: 0 0 0 1px; border-radius: 0; transform: translateX(105%); opacity: 0; pointer-events: none; transition: transform .25s ease, opacity .2s ease; } .list { top: 0; bottom: 50%; padding: 86px 14px 14px; border-radius: 0 0 0 22px; } .list_bottom { top: 50%; bottom: 0; padding: 14px; } .list a, .list_bottom a { min-height: 48px; } .list.show, .list_bottom.show { display: block; transform: translateX(0); opacity: 1; pointer-events: auto; animation: none; } }
