@@ -104,9 +104,10 @@
             if (!libraryResponse.ok) throw new Error("تعذر تحميل مكتبتك");
 
             const library = await libraryResponse.json();
-            const books = Array.isArray(availableBooks) && availableBooks.length
-                ? availableBooks
-                : await Promise.resolve(availableBooks || booksCache || fetch("/api/books").then(response => {
+            const suppliedBooks = await Promise.resolve(availableBooks);
+            const books = Array.isArray(suppliedBooks) && suppliedBooks.length
+                ? suppliedBooks
+                : await Promise.resolve(booksCache || fetch("/api/books").then(response => {
                     if (!response.ok) throw new Error("تعذر تحميل الكتب");
                     return response.json();
                 }));
