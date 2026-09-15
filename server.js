@@ -21,8 +21,9 @@ const SESSION_COOKIE = "book_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 const SESSION_SECRET = process.env.SESSION_SECRET || (process.env.NODE_ENV === "production" ? "" : crypto.randomBytes(32).toString("hex"));
 const KASHIER_SECRET_KEY = process.env.KASHIER_SECRET_KEY || "";
+const KASHIER_API_KEY = process.env.KASHIER_API_KEY || "";
 const KASHIER_MERCHANT_ID = process.env.KASHIER_MERCHANT_ID || "";
-const KASHIER_PAYMENT_URL = process.env.KASHIER_PAYMENT_URL || "https://test-api.kashier.io/v2/payment-link";
+const KASHIER_PAYMENT_URL = process.env.KASHIER_PAYMENT_URL || "https://test-api.kashier.io/v3/payment/sessions";
 
 if (process.env.DNS_SERVERS) {
     dns.setServers(process.env.DNS_SERVERS.split(",").map(server => server.trim()).filter(Boolean));
@@ -774,17 +775,42 @@ app.post("/api/payments/create", async (req, res) => {
         const payment = await Payment.create({ userEmail, bookIds: books.map(book => book._id), amountCents });
         const orderReference = String(payment._id);
         const origin = `${req.protocol}://${req.get("host")}`;
-        const response = await fetch(KASHIER_PAYMENT_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: KASHIER_SECRET_KEY },
-            body: JSON.stringify({
+        const isPaymentSession = KASHIER_PAYMENT_URL.includes("/v3/payment/sessions");
+        if (isPaymentSession && !KASHIER_API_KEY) {
+            await Payment.deleteOne({ _id: payment._id, status: "pending" });
+            return res.status(503).send("لم يتم إعداد KASHIER_API_KEY على الخادم");
+        }
+        const redirectUrl = `${origin}/cart.html?payment=return&order=${encodeURIComponent(orderReference)}&paymentId=${encodeURIComponent(String(payment._id))}`;
+        const requestBody = isPaymentSession
+            ? {
+                expireAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+                maxFailureAttempts: 3,
+                paymentType: "credit",
+                amount: (amountCents / 100).toFixed(2),
+                currency: "EGP",
+                order: orderReference,
+                merchantId: KASHIER_MERCHANT_ID,
+                merchantRedirect: redirectUrl,
+                display: "ar",
+                type: "one-time",
+                customer: { email: userEmail, reference: userEmail }
+            }
+            : {
                 merchantId: KASHIER_MERCHANT_ID,
                 amount: (amountCents / 100).toFixed(2),
                 currency: "EGP",
                 orderReference,
-                redirectUrl: `${origin}/cart.html?payment=return&order=${encodeURIComponent(orderReference)}&paymentId=${encodeURIComponent(String(payment._id))}`,
+                redirectUrl,
                 webhookUrl: process.env.KASHIER_WEBHOOK_URL || `${origin}/api/payments/kashier/webhook`
-            })
+            };
+        const response = await fetch(KASHIER_PAYMENT_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: KASHIER_SECRET_KEY,
+                ...(isPaymentSession ? { "api-key": KASHIER_API_KEY } : {})
+            },
+            body: JSON.stringify(requestBody)
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
