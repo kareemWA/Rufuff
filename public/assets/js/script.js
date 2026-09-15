@@ -243,7 +243,7 @@ async function refreshPurchasedBooks(visibleBooks) {
         const message = card.querySelector(".book-message");
         if (isPending) {
             if (button) button.remove();
-            message.textContent = "تم إرسال الإيصال، والكتاب بانتظار تأكيد الدفع.";
+            message.textContent = "يوجد مشكله في عمله الشراء اذا لم يتم حلها في غضون ساعه تواصل مع 01016355675";
             message.className = "book-message pending";
             return;
         }
@@ -258,7 +258,7 @@ async function refreshPurchasedBooks(visibleBooks) {
         message.className = "book-message success";
         if (book.hasPdf ?? Boolean(book.pdfFile)) {
             const accessUrl = `/api/books/${encodeURIComponent(book._id)}/access`;
-            message.innerHTML = `<a class="btn buy-book" href="reader.html?id=${encodeURIComponent(book._id)}" >اقرأ الكتاب</a> · <a  href="${accessUrl}?download=1" target="_blank">تحميل PDF</a>`;
+            message.innerHTML = `<a class="btn read-book-link" href="reader.html?id=${encodeURIComponent(book._id)}" >اقرأ الكتاب</a> · <a  href="${accessUrl}?download=1" target="_blank">تحميل PDF</a>`;
         }
     });
 }
