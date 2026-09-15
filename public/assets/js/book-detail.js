@@ -49,6 +49,7 @@ function setText(element, value) {
 function renderComments(comments, averageRating) {
     const count = comments.length;
     setText(reviewsSummary, count ? `${averageRating} من 5 · ${count} تقييم` : "لا توجد تقييمات بعد");
+    setText(detailRating, count ? `★ ${averageRating} · ${count} تقييم` : "☆ لا توجد تقييمات");
     commentsList.innerHTML = "";
 
     if (!count) {
@@ -137,7 +138,7 @@ async function loadBook() {
         localStorage.removeItem(bookCacheKey);
     }
 
-    const bookResponse = fetch(`/api/books/${encodeURIComponent(bookId)}`)
+    const bookResponse = fetch(`/api/books/${encodeURIComponent(bookId)}`, { cache: "no-store" })
         .then(response => {
             if (!response.ok) throw new Error("تعذر تحميل تفاصيل الكتاب");
             return response.json();
