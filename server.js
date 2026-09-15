@@ -793,7 +793,14 @@ app.post("/api/payments/create", async (req, res) => {
             console.error("Kashier payment-link error:", response.status, data);
             return res.status(502).send(kashierError || "تعذر إنشاء رابط الدفع عبر Kashier");
         }
-        const paymentUrl = data.paymentUrl || data.redirectUrl || data.url || data.data?.paymentUrl || data.data?.redirectUrl;
+        const paymentUrl = data.sessionUrl
+            || data.paymentUrl
+            || data.redirectUrl
+            || data.url
+            || data.data?.sessionUrl
+            || data.data?.paymentUrl
+            || data.data?.redirectUrl
+            || data.data?.url;
         if (!paymentUrl) {
             await Payment.deleteOne({ _id: payment._id, status: "pending" });
             return res.status(502).send("استجابة Kashier لا تحتوي على رابط دفع");
