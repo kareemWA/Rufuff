@@ -364,11 +364,11 @@ app.get("/api/library", requireUser, async (req, res) => {
 
 app.put("/api/library", requireUser, async (req, res) => {
     try {
-        const cartBookIds = Array.isArray(req.body.cartBookIds) ? req.body.cartBookIds : [];
-        const favoriteBookIds = Array.isArray(req.body.favoriteBookIds) ? req.body.favoriteBookIds : [];
+        const cartBookIds = Array.isArray(req.body.cartBookIds) ? [...new Set(req.body.cartBookIds.map(String))] : [];
+        const favoriteBookIds = Array.isArray(req.body.favoriteBookIds) ? [...new Set(req.body.favoriteBookIds.map(String))] : [];
         const library = await Library.findOneAndUpdate(
             { userEmail: req.currentUser.email },
-            { userEmail: req.currentUser.email, cartBookIds, favoriteBookIds },
+            { $set: { userEmail: req.currentUser.email, cartBookIds, favoriteBookIds } },
             { upsert: true, new: true, runValidators: true }
         ).lean();
         res.json(library);

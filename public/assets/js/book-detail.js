@@ -16,7 +16,7 @@ const commentForm = document.getElementById("commentForm");
 const commentMessage = document.getElementById("commentMessage");
 const buyButton = document.getElementById("buyButton");
 const purchaseMessage = document.getElementById("purchaseMessage");
-
+const favoriteButton = document.getElementById("favoriteButton");
 const downloadButton = document.getElementById("downloadButton");
 const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
 const signupPage = "signin.html";
@@ -26,7 +26,11 @@ let purchased = false;
 let pending = false;
 let accessUrl = "";
 let cart = [];
-
+let favorites = [];
+const bookCacheKey = `book:${bookId}`;
+const commentsCacheKey = `book-comments:${bookId}`;
+const bookCacheTtl = 5 * 60 * 1000;
+const commentsCacheTtl = 15 * 1000;
 
 function redirectGuest(event) {
     if (currentUser?.email) return false;
@@ -85,11 +89,16 @@ function renderBook(data) {
     setText(detailRating, data.reviewsCount ? `★ ${data.averageRating}` : "☆ لا توجد تقييمات");
     setText(detailReadCount, `${data.readCount || 0} قراءة`);
     document.title = `${data.title} | رفوف`;
-    renderComments(data.comments, data.averageRating);
-   
+    updateFavoriteButton();
+    bookDetail.hidden = false;
+    detailStatus.hidden = true;
 }
 
-
+function updateFavoriteButton() {
+    const isFavorite = favorites.some(item => item._id === book._id);
+    favoriteButton.textContent = isFavorite ? "♥ في المفضلة" : "♡ إضافة للمفضلة";
+    favoriteButton.classList.toggle("is-favorite", isFavorite);
+}
 
 function updatePurchaseButton() {
     const isFree = Number(book?.price) <= 0 && (book?.hasPdf ?? Boolean(book?.pdfFile));
@@ -100,50 +109,74 @@ function updatePurchaseButton() {
     if (purchased) downloadButton.href = `${accessUrl}?download=1`;
 }
 
-
+favoriteButton.addEventListener("click", async event => {
+    if (redirectGuest(event)) return;
+    const isFavorite = favorites.some(item => item._id === book._id);
+    favorites = isFavorite
+        ? favorites.filter(item => item._id !== book._id)
+        : [...favorites, book];
+    const saved = await window.accountLibrary.save(currentUser, cart, favorites);
+    updateFavoriteButton();
+    purchaseMessage.textContent = saved
+        ? (isFavorite ? "تمت إزالة الكتاب من المفضلة." : "تمت إضافة الكتاب إلى المفضلة.")
+        : "تعذر حفظ المفضلة. تحقق من اتصال الموقع.";
+    purchaseMessage.className = `book-message ${saved ? "success" : "error"}`;
+});
 
 async function loadBook() {
     if (!bookId) throw new Error("رابط الكتاب غير صحيح");
-
-    const [bookResponse, commentsResponse, purchaseResponse] = await Promise.all([
-        fetch(`/api/books/${encodeURIComponent(bookId)}`),
-        fetch(`/api/books/${encodeURIComponent(bookId)}/comments`),
-        fetch(`/api/purchases/${encodeURIComponent(bookId)}`)
-    ]);
-
-    if (!bookResponse.ok) {
-        throw new Error(await bookResponse.text());
+    let cachedBook = null;
+    try {
+        const cached = JSON.parse(localStorage.getItem(bookCacheKey) || "null");
+        if (cached?.book && Date.now() - cached.cachedAt < bookCacheTtl) cachedBook = cached.book;
+    } catch {
+        localStorage.removeItem(bookCacheKey);
     }
 
-    const bookData = await bookResponse.json();
+    const bookResponse = fetch(`/api/books/${encodeURIComponent(bookId)}`)
+        .then(response => {
+            if (!response.ok) throw new Error("تعذر تحميل تفاصيل الكتاب");
+            return response.json();
+        });
+    if (cachedBook) renderBook(cachedBook);
+    const freshBook = await bookResponse;
+    localStorage.setItem(bookCacheKey, JSON.stringify({ cachedAt: Date.now(), book: freshBook }));
+    renderBook(freshBook);
 
-    let commentsData = {
-        comments: [],
-        averageRating: 0,
-        reviewsCount: 0
-    };
-
-    if (commentsResponse.ok) {
-        commentsData = await commentsResponse.json();
-    }
-
-    renderBook({
-        ...bookData,
-        comments: commentsData.comments || [],
-        averageRating: commentsData.averageRating || 0,
-        reviewsCount: commentsData.reviewsCount || 0
-    });
-
-    if (purchaseResponse.ok) {
-        const purchase = await purchaseResponse.json();
-
-        purchased = purchase.purchased;
-        pending = purchase.pending;
-        accessUrl = purchase.accessUrl;
-
-        updatePurchaseButton();
-    }
+    loadComments();
+    fetch(`/api/purchases/${encodeURIComponent(bookId)}`)
+        .then(response => response.ok ? response.json() : null)
+        .then(purchase => {
+            if (!purchase) return;
+            purchased = purchase.purchased;
+            pending = purchase.pending;
+            accessUrl = purchase.accessUrl;
+            updatePurchaseButton();
+        })
+        .catch(() => {});
+    return freshBook;
 }
+
+async function loadComments(force = false) {
+    if (!bookId) return;
+    if (!force) {
+        try {
+            const cached = JSON.parse(localStorage.getItem(commentsCacheKey) || "null");
+            if (cached?.data && Date.now() - cached.cachedAt < commentsCacheTtl) {
+                renderComments(cached.data.comments, cached.data.averageRating);
+            }
+        } catch {
+            localStorage.removeItem(commentsCacheKey);
+        }
+    }
+
+    const response = await fetch(`/api/books/${encodeURIComponent(bookId)}/comments`);
+    if (!response.ok) return;
+    const data = await response.json();
+    localStorage.setItem(commentsCacheKey, JSON.stringify({ cachedAt: Date.now(), data }));
+    renderComments(data.comments, data.averageRating);
+}
+
 buyButton.addEventListener("click", async event => {
     const isFree = Number(book?.price) <= 0 && (book?.hasPdf ?? Boolean(book?.pdfFile));
     if (redirectGuest(event)) return;
@@ -185,7 +218,7 @@ commentForm.addEventListener("submit", async event => {
         commentForm.reset();
         commentMessage.textContent = "تم نشر تقييمك بنجاح.";
         commentMessage.className = "form-message success";
-        await loadBook();
+        await loadComments(true);
     } catch (error) {
         commentMessage.textContent = error.message || "تعذر نشر التقييم.";
         commentMessage.className = "form-message error";
@@ -194,6 +227,18 @@ commentForm.addEventListener("submit", async event => {
     }
 });
 
+async function initializeBookDetails() {
+    const bookPromise = loadBook().catch(error => {
+        detailStatus.textContent = error.message || "تعذر تحميل تفاصيل الكتاب.";
+        detailStatus.className = "detail-status error";
+        throw error;
+    });
+    window.accountLibrary.load(currentUser, bookPromise).then(library => {
+        cart = library.cart;
+        favorites = library.favorites;
+        if (book) updateFavoriteButton();
+    }).catch(() => {});
+}
 
 initializeBookDetails().catch(error => {
     detailStatus.textContent = error.message || "تعذر تحميل تفاصيل الكتاب.";

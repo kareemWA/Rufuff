@@ -94,20 +94,22 @@
         localStorage.removeItem(storageKey("paymentState", email));
     }
 
-    async function load(user) {
+    async function load(user, availableBooks = null) {
         const localCart = readLocal("bookCart", user?.email);
         const localFavorites = readLocal("favoriteBooks", user?.email);
         if (!user?.email) return { cart: localCart, favorites: localFavorites };
 
         try {
-            const [libraryResponse, booksResponse] = await Promise.all([
-                fetch("/api/library"),
-                fetch("/api/books")
-            ]);
-            if (!libraryResponse.ok || !booksResponse.ok) throw new Error("تعذر تحميل مكتبتك");
+            const libraryResponse = await fetch("/api/library");
+            if (!libraryResponse.ok) throw new Error("تعذر تحميل مكتبتك");
 
             const library = await libraryResponse.json();
-            const books = await booksResponse.json();
+            const books = Array.isArray(availableBooks) && availableBooks.length
+                ? availableBooks
+                : await Promise.resolve(availableBooks || booksCache || fetch("/api/books").then(response => {
+                    if (!response.ok) throw new Error("تعذر تحميل الكتب");
+                    return response.json();
+                }));
             booksCache = books;
             const booksById = new Map(books.map(book => [String(book._id), book]));
             const accountCartBookIds = library.cartBookIds || [];

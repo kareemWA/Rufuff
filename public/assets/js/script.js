@@ -20,6 +20,8 @@ let favorites = [];
 let books = [];
 let categoryButtons = [];
 let purchaseState = null;
+const booksCacheKey = "booksCache";
+const categoriesCacheKey = "categoriesCache";
 
 function escapeHtml(value) {
     return String(value ?? "").replace(/[&<>'"]/g, character => ({
@@ -111,14 +113,14 @@ async function logoutUser() {
     }
 }
 
-function createBookCard(book) {
+function createBookCard(book, index = 0) {
     const article = document.createElement("article");
     article.className = "one_videos";
     article.dataset.category = book.category;
     article.dataset.title = book.title;
 
     article.innerHTML = `
-        <img class="book-cover" src="${book.image}" alt="غلاف كتاب ${book.title}">
+        <img class="book-cover" src="${book.image}" alt="غلاف كتاب ${book.title}" loading="${index > 3 ? "lazy" : "eager"}">
         <div class="book-info">
             <span class="book-category">${book.category}</span>
             <h3>${book.title}</h3>
@@ -129,7 +131,7 @@ function createBookCard(book) {
                     ? `<a class="btn buy-book" href="reader.html?id=${encodeURIComponent(book._id)}">اقرأ مجانًا</a>`
                     : '<button class="btn buy-book" type="button">أضف للسلة</button>'}
             </div>
-           
+            <button class="favorite-toggle" type="button" aria-label="إضافة ${book.title} للمفضلة">${favorites.some(item => item._id === book._id) ? "♥" : "♡"}</button>
             <a class="book-details-link" href="book-detail.html?id=${book._id}">التفاصيل</a>
             <p class="book-message" role="status" aria-live="polite"></p>
         </div>`;
@@ -152,7 +154,22 @@ function createBookCard(book) {
 
     article.querySelector(".book-details-link").addEventListener("click", redirectGuest);
 
-    
+    article.querySelector(".favorite-toggle").addEventListener("click", async event => {
+        if (redirectGuest(event)) return;
+        const isFavorite = favorites.some(item => item._id === book._id);
+        favorites = isFavorite
+            ? favorites.filter(item => item._id !== book._id)
+            : [...favorites, book];
+        const saved = await window.accountLibrary.save(currentUser, cart, favorites);
+        event.currentTarget.textContent = isFavorite ? "♡" : "♥";
+        event.currentTarget.classList.toggle("is-favorite", !isFavorite);
+        event.currentTarget.setAttribute("aria-label", isFavorite ? `إزالة ${book.title} من المفضلة` : `إضافة ${book.title} للمفضلة`);
+        const message = article.querySelector(".book-message");
+        message.textContent = saved
+            ? (isFavorite ? "تمت إزالة الكتاب من المفضلة." : "تمت إضافة الكتاب إلى المفضلة.")
+            : "تعذر حفظ المفضلة. تحقق من اتصال الموقع.";
+        message.className = `book-message ${saved ? "success" : "error"}`;
+    });
 
     if (favorites.some(item => item._id === book._id)) {
         article.querySelector(".favorite-toggle").classList.add("is-favorite");
@@ -170,7 +187,7 @@ function renderBooks() {
     });
 
     booksContainer.querySelectorAll(".one_videos, .no").forEach(element => element.remove());
-    visibleBooks.forEach(book => booksContainer.appendChild(createBookCard(book)));
+    visibleBooks.forEach((book, index) => booksContainer.appendChild(createBookCard(book, index)));
     refreshPurchasedBooks(visibleBooks);
 
     if (!visibleBooks.length) {
@@ -252,12 +269,12 @@ async function loadBooks() {
         books = sortBooksNewestFirst(sharedBooks);
         if (booksStatus) booksStatus.remove();
         renderBooks();
-        return;
     }
 
     try {
-        const cachedBooks = JSON.parse(localStorage.getItem("booksCache") || "null");
-        if (Array.isArray(cachedBooks) && cachedBooks.length) {
+        const cachedValue = JSON.parse(localStorage.getItem(booksCacheKey) || "null");
+        const cachedBooks = Array.isArray(cachedValue) ? cachedValue : cachedValue?.books;
+        if ((!books.length || !sharedBooks?.length) && Array.isArray(cachedBooks) && cachedBooks.length) {
             books = sortBooksNewestFirst(cachedBooks);
             if (booksStatus) booksStatus.remove();
             renderBooks();
@@ -269,15 +286,20 @@ async function loadBooks() {
     try {
         const response = await fetch("/api/books");
         if (!response.ok) throw new Error("تعذر تحميل الكتب");
-        books = sortBooksNewestFirst(await response.json());
-        localStorage.setItem("booksCache", JSON.stringify(books));
+        const freshBooks = sortBooksNewestFirst(await response.json());
+        const currentSignature = books.map(book => `${book._id}:${book.updatedAt || ""}`).join("|");
+        const freshSignature = freshBooks.map(book => `${book._id}:${book.updatedAt || ""}`).join("|");
+        books = freshBooks;
+        localStorage.setItem(booksCacheKey, JSON.stringify({ cachedAt: Date.now(), books }));
         if (booksStatus) booksStatus.remove();
-        renderBooks();
+        if (currentSignature !== freshSignature) renderBooks();
+        return books;
     } catch (error) {
         if (booksStatus) {
             booksStatus.textContent = "تعذر تحميل الكتب. تأكد أن السيرفر يعمل.";
             booksStatus.className = "no error";
         }
+        return books;
     }
 }
 
@@ -309,9 +331,18 @@ function renderCategories(categories) {
 
 async function loadCategories() {
     try {
+        const cachedCategories = JSON.parse(localStorage.getItem(categoriesCacheKey) || "null");
+        if (Array.isArray(cachedCategories) && cachedCategories.length) renderCategories(cachedCategories);
+    } catch {
+        localStorage.removeItem(categoriesCacheKey);
+    }
+
+    try {
         const response = await fetch("/api/categories");
         if (!response.ok) throw new Error("تعذر تحميل التصنيفات");
-        renderCategories(await response.json());
+        const categories = await response.json();
+        localStorage.setItem(categoriesCacheKey, JSON.stringify(categories));
+        renderCategories(categories);
     } catch (error) {
         renderCategories([]);
     }
@@ -350,6 +381,9 @@ if (cartButton) {
     cartButton.addEventListener("click", () => { window.location.href = "cart.html"; });
 }
 
+const favoriteLink = document.getElementById("favorite");
+if (favoriteLink) favoriteLink.href = "favorites.html";
+
 function closeMenu() {
     if (!nav || !navBottom) return;
     nav.classList.remove("show");
@@ -382,13 +416,15 @@ document.querySelectorAll(".list a, .list_bottom a, .book-details-link, #cartBut
 if (title) title.addEventListener("click", () => window.location.reload());
 
 async function initializeStore() {
-    await refreshCurrentUserFromServer();
-    const library = await window.accountLibrary.load(currentUser);
-    cart = library.cart;
-    
-    await updateCart();
-    await loadCategories();
-    loadBooks();
+    refreshCurrentUserFromServer().catch(() => {});
+    loadCategories();
+    const booksPromise = loadBooks();
+    window.accountLibrary.load(currentUser, booksPromise).then(async library => {
+        cart = library.cart;
+        favorites = library.favorites;
+        await updateCart();
+        renderBooks();
+    });
 }
 
 initializeStore();
