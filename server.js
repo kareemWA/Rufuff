@@ -23,7 +23,10 @@ const SESSION_SECRET = process.env.SESSION_SECRET || (process.env.NODE_ENV === "
 const KASHIER_SECRET_KEY = process.env.KASHIER_SECRET_KEY || "";
 const KASHIER_API_KEY = process.env.KASHIER_API_KEY || "";
 const KASHIER_MERCHANT_ID = process.env.KASHIER_MERCHANT_ID || "";
-const KASHIER_PAYMENT_URL = process.env.KASHIER_PAYMENT_URL || "https://test-api.kashier.io/v3/payment/sessions";
+const configuredKashierPaymentUrl = process.env.KASHIER_PAYMENT_URL || "";
+const KASHIER_PAYMENT_URL = configuredKashierPaymentUrl.includes("/v3/payment/sessions")
+    ? configuredKashierPaymentUrl
+    : "https://test-api.kashier.io/v3/payment/sessions";
 
 if (process.env.DNS_SERVERS) {
     dns.setServers(process.env.DNS_SERVERS.split(",").map(server => server.trim()).filter(Boolean));
