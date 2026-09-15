@@ -66,7 +66,7 @@ body.dark-mode .welcome { background: linear-gradient(120deg, #29453a, #3d3b2f);
 .categories { display: flex; gap: 8px; flex-wrap: wrap; }
 .category { border: 1px solid var(--border); border-radius: 20px; padding: 8px 14px; background: var(--surface); color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; }
 .category.active, .category:hover { border-color: var(--primary); background: var(--primary); color: #fff; }
-.first_videos { width: min(1120px, calc(100% - 40px)); display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px; margin: 0 auto 55px; }
+.first_videos { width: min(1120px, calc(100% - 40px)); display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 280px)); justify-content: start; gap: 18px; margin: 0 auto 55px; }
 .one_videos { padding: 12px; border: 1px solid var(--border); border-radius: 15px; background: var(--surface); box-shadow: var(--shadow); transition: transform .25s, box-shadow .25s; }
 .one_videos:hover { transform: translateY(-5px); box-shadow: 0 20px 42px rgba(69, 57, 42, .15); }
 .book-cover { width: 100%; height: 245px; border-radius: 10px; object-fit: cover; }
