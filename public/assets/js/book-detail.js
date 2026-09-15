@@ -87,7 +87,7 @@ function renderBook(data) {
     setText(detailPrice, `${data.price} جنيه`);
     setText(detailOriginalPrice, `${data.originalPrice || data.price} جنيه`);
     setText(detailDiscount, `خصم ${data.discountPercent || 0}%`);
-    setText(detailRating, data.reviewsCount ? `★ ${data.averageRating}` : "☆ لا توجد تقييمات");
+    setText(detailRating, data.reviewsCount ? `★ ${data.averageRating}` : "☆ 0");
     setText(detailReadCount, `${data.readCount || 0} قراءة`);
     document.title = `${data.title} | رفوف`;
     updateFavoriteButton();
@@ -97,7 +97,7 @@ function renderBook(data) {
 
 function updateFavoriteButton() {
     const isFavorite = favorites.some(item => item._id === book._id);
-    favoriteButton.textContent = isFavorite ? "♥ في المفضلة" : "♡ إضافة للمفضلة";
+    favoriteButton.textContent = isFavorite ? "♥ " : "♡";
     favoriteButton.classList.toggle("is-favorite", isFavorite);
 }
 
