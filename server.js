@@ -782,7 +782,6 @@ app.post("/api/payments/create", async (req, res) => {
                 amount: (amountCents / 100).toFixed(2),
                 currency: "EGP",
                 orderReference,
-                customer: { email: userEmail },
                 redirectUrl: `${origin}/cart.html?payment=return&order=${encodeURIComponent(orderReference)}&paymentId=${encodeURIComponent(String(payment._id))}`,
                 webhookUrl: process.env.KASHIER_WEBHOOK_URL || `${origin}/api/payments/kashier/webhook`
             })
@@ -790,7 +789,9 @@ app.post("/api/payments/create", async (req, res) => {
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
             await Payment.deleteOne({ _id: payment._id, status: "pending" });
-            return res.status(502).send(data.message || "تعذر إنشاء رابط الدفع عبر Kashier");
+            const kashierError = data.message || data.error?.message || data.error || data.errors?.[0]?.message;
+            console.error("Kashier payment-link error:", response.status, data);
+            return res.status(502).send(kashierError || "تعذر إنشاء رابط الدفع عبر Kashier");
         }
         const paymentUrl = data.paymentUrl || data.redirectUrl || data.url || data.data?.paymentUrl || data.data?.redirectUrl;
         if (!paymentUrl) {
