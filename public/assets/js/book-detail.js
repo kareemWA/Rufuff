@@ -140,7 +140,16 @@ async function loadBook() {
         });
     if (cachedBook) renderBook(cachedBook);
     const freshBook = await bookResponse;
-    localStorage.setItem(bookCacheKey, JSON.stringify({ cachedAt: Date.now(), book: freshBook }));
+    const cachedBookValue = JSON.stringify({ cachedAt: Date.now(), book: freshBook });
+    if (cachedBookValue.length <= 300000) {
+        try {
+            localStorage.setItem(bookCacheKey, cachedBookValue);
+        } catch {
+            localStorage.removeItem(bookCacheKey);
+        }
+    } else {
+        localStorage.removeItem(bookCacheKey);
+    }
     renderBook(freshBook);
 
     loadComments();

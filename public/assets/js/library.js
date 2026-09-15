@@ -39,6 +39,20 @@
         }
     }
 
+    function writeLocalValue(name, value) {
+        try {
+            localStorage.setItem(name, JSON.stringify(value));
+            return true;
+        } catch (error) {
+            if (error?.name === "QuotaExceededError") {
+                localStorage.removeItem(name);
+                console.warn(`تعذر تخزين ${name} محليًا بسبب امتلاء مساحة المتصفح`);
+                return false;
+            }
+            throw error;
+        }
+    }
+
     function readPaymentState(user) {
         if (!user?.email) return { records: {}, statuses: {} };
         try {
@@ -52,14 +66,22 @@
         if (user?.email) writeLocal("paymentState", state, user.email);
     }
 
+    function paymentBook(book) {
+        if (!book) return book;
+        const storedBook = { ...book };
+        if (typeof storedBook.image === "string" && storedBook.image.length > 100000) delete storedBook.image;
+        delete storedBook.pdfFile;
+        return storedBook;
+    }
+
     function savePaymentRequest(user, books, paymentId) {
         const state = readPaymentState(user);
         books.forEach(book => {
-            state.records[String(book._id)] = { book, status: "pending", paymentId };
+            state.records[String(book._id)] = { book: paymentBook(book), status: "pending", paymentId };
         });
         if (paymentId) {
             state.statuses[paymentId] = "pending";
-            localStorage.setItem("paymentStatuses", JSON.stringify(state.statuses));
+            writeLocalValue("paymentStatuses", state.statuses);
         }
         writePaymentState(user, state);
     }
@@ -78,7 +100,7 @@
             const previous = state.records[id] || {};
             state.records[id] = {
                 ...previous,
-                book: booksById.get(id) || previous.book,
+                book: paymentBook(booksById.get(id) || previous.book),
                 status: payment.status,
                 paymentId: payment.id,
                 rejectionReason: payment.rejectionReason || null
@@ -89,7 +111,7 @@
                 if (!booksById.has(id)) delete state.records[id];
             });
         }
-        localStorage.setItem("paymentStatuses", JSON.stringify(state.statuses));
+        writeLocalValue("paymentStatuses", state.statuses);
         writePaymentState(user, state);
         return state;
     }
@@ -97,7 +119,7 @@
     function markPaymentRecord(user, book, status) {
         const state = readPaymentState(user);
         const id = String(book._id);
-        state.records[id] = { ...(state.records[id] || {}), book, status, rejectionReason: null };
+        state.records[id] = { ...(state.records[id] || {}), book: paymentBook(book), status, rejectionReason: null };
         writePaymentState(user, state);
     }
 
