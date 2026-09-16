@@ -269,6 +269,10 @@ async function refreshPurchasedBooks(visibleBooks) {
             if (hasFreshPending) {
                 message.textContent = "بانتظار الدفع";
                 message.className = "book-message pending";
+                const waitMs = Math.max(0, Number(localRecord.expiresAt || Date.now()) - Date.now());
+                window.setTimeout(() => {
+                    if (books.length) renderBooks();
+                }, waitMs);
             } else {
                 message.textContent = (book.hasPdf ?? Boolean(book.pdfFile)) ? "تم شراء الكتاب" : "تم الشراء، ملف PDF غير مرفوع بعد.";
                 message.className = "book-message success";

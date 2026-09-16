@@ -112,6 +112,11 @@
                     books.forEach(book => delete latestState.records[String(book._id)]);
                     writeLocalValue("paymentStatuses", latestState.statuses);
                     writePaymentState(user, latestState);
+                    try {
+                        window.dispatchEvent(new CustomEvent("paymentStateChanged", { detail: { at: Date.now() } }));
+                    } catch {
+                        // ignored
+                    }
                 }
             }, 5000);
         }
