@@ -900,7 +900,6 @@ async function getPaymentBooks(req, userEmail) {
             ? Math.max(0, Math.round(amountCents * (100 - Math.min(100, coupon.value)) / 100))
             : Math.max(0, amountCents - Math.round(coupon.value * 100));
     }
-    if (await Payment.exists({ userEmail, bookIds: { $in: bookIds }, status: "pending" })) throw new Error("لديك طلب قيد المراجعة بالفعل");
     return { books, amountCents };
 }
 
