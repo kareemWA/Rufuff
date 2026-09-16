@@ -251,7 +251,7 @@ async function refreshPurchasedBooks(visibleBooks) {
         if (!card) return;
 
         const localRecord = localRecords[String(book._id)];
-        const isPending = purchaseState.pendingIds.has(String(book._id));
+        const hasFreshPending = localRecord?.status === "pending" && (!localRecord.expiresAt || Number(localRecord.expiresAt) > Date.now());
         const isPurchased = purchaseState.purchasedIds.has(String(book._id));
         if (localRecord?.status === "failed") {
             const button = card.querySelector(".buy-book");
@@ -262,27 +262,22 @@ async function refreshPurchasedBooks(visibleBooks) {
             return;
         }
 
-        if (localRecord?.status === "pending" || localRecord?.status === "paid") {
+        if (hasFreshPending || localRecord?.status === "paid") {
             const button = card.querySelector(".buy-book");
             const message = card.querySelector(".book-message");
             if (button) button.remove();
-            if (localRecord.status === "pending") {
-                message.textContent = "تم إرسال الإيصال، والكتاب بانتظار تأكيد الدفع.";
+            if (hasFreshPending) {
+                message.textContent = "بانتظار الدفع";
                 message.className = "book-message pending";
             } else {
                 message.textContent = (book.hasPdf ?? Boolean(book.pdfFile)) ? "تم شراء الكتاب" : "تم الشراء، ملف PDF غير مرفوع بعد.";
                 message.className = "book-message success";
             }
+            return;
         }
 
         const button = card.querySelector(".buy-book");
         const message = card.querySelector(".book-message");
-        if (isPending) {
-            if (button) button.remove();
-            message.textContent = "تم إرسال الإيصال، والكتاب بانتظار تأكيد الدفع.";
-            message.className = "book-message pending";
-            return;
-        }
         if (!isPurchased) return;
 
         if (isPurchased && localRecord?.status !== "paid") {
@@ -372,7 +367,23 @@ async function loadCategories() {
     }
 }
 
-if (searchInput) searchInput.addEventListener("input", renderBooks);
+if (searchInput) {
+    searchInput.addEventListener("input", () => {
+        const value = (searchInput.value || "").trim();
+        const shouldFocusTopSearch = /مكتبة\s*رفوف|رفوف/i.test(value);
+        if (shouldFocusTopSearch) {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            searchInput.focus();
+            searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+        }
+        renderBooks();
+    });
+}
+window.addEventListener("paymentStateChanged", () => {
+    if (books.length) {
+        renderBooks();
+    }
+});
 
 function showPaymentToast(message, error = false) {
     const toast = document.createElement("div");
