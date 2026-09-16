@@ -64,12 +64,17 @@
         if (!user?.email) return { records: {}, statuses: {} };
         try {
             const state = JSON.parse(localStorage.getItem(storageKey("paymentState", user.email)) || '{"records":{},"statuses":{}}');
-            state.records = Object.fromEntries(Object.entries(state.records || {}).map(([id, record]) => [id, {
+            const activeRecords = Object.fromEntries(Object.entries(state.records || {}).filter(([, record]) => {
+                if (record?.status !== "pending") return true;
+                return !record?.expiresAt || Number(record.expiresAt) > Date.now();
+            }).map(([id, record]) => [id, {
                 bookId: String(record.bookId || record.book?._id || id),
                 status: record.status,
                 paymentId: record.paymentId,
-                rejectionReason: record.rejectionReason || null
+                rejectionReason: record.rejectionReason || null,
+                expiresAt: record.expiresAt || null
             }]));
+            state.records = activeRecords;
             return state;
         } catch {
             return { records: {}, statuses: {} };
@@ -82,12 +87,22 @@
 
     function savePaymentRequest(user, books, paymentId) {
         const state = readPaymentState(user);
+        const expiresAt = Date.now() + 5000;
         books.forEach(book => {
-            state.records[String(book._id)] = { bookId: String(book._id), status: "pending", paymentId };
+            state.records[String(book._id)] = { bookId: String(book._id), status: "pending", paymentId, expiresAt };
         });
         if (paymentId) {
             state.statuses[paymentId] = "pending";
             writeLocalValue("paymentStatuses", state.statuses);
+            window.setTimeout(() => {
+                const latestState = readPaymentState(user);
+                if (latestState.statuses[String(paymentId)] === "pending") {
+                    delete latestState.statuses[String(paymentId)];
+                    books.forEach(book => delete latestState.records[String(book._id)]);
+                    writeLocalValue("paymentStatuses", latestState.statuses);
+                    writePaymentState(user, latestState);
+                }
+            }, 5000);
         }
         writePaymentState(user, state);
     }
