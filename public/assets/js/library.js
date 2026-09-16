@@ -64,9 +64,24 @@
         if (!user?.email) return { records: {}, statuses: {} };
         try {
             const state = JSON.parse(localStorage.getItem(storageKey("paymentState", user.email)) || '{"records":{},"statuses":{}}');
+            const now = Date.now();
+            const expiredPendingIds = Object.entries(state.records || {})
+                .filter(([, record]) => record?.status === "pending" && (!record?.expiresAt || Number(record.expiresAt) <= now))
+                .map(([id]) => id);
+
+            if (expiredPendingIds.length) {
+                expiredPendingIds.forEach(id => delete state.records[id]);
+                Object.keys(state.statuses || {}).forEach(paymentId => {
+                    const status = state.statuses[paymentId];
+                    if (status === "pending") delete state.statuses[paymentId];
+                });
+                writeLocal("paymentState", state, user.email);
+                writeLocalValue("paymentStatuses", state.statuses || {});
+            }
+
             const activeRecords = Object.fromEntries(Object.entries(state.records || {}).filter(([, record]) => {
                 if (record?.status !== "pending") return true;
-                return !record?.expiresAt || Number(record.expiresAt) > Date.now();
+                return !record?.expiresAt || Number(record.expiresAt) > now;
             }).map(([id, record]) => [id, {
                 bookId: String(record.bookId || record.book?._id || id),
                 status: record.status,
