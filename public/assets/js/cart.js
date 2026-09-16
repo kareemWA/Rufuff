@@ -248,6 +248,7 @@ function watchPaymentStatus(paymentId, submittedBooks) {
         attempts += 1;
         if (attempts >= 40) {
             window.clearInterval(interval);
+            window.accountLibrary?.clearPaymentRequest?.(currentUser, submittedBooks, paymentId);
             cartMessage.textContent = "لم يصل تأكيد الدفع بعد. ستبقى الكتب في السلة حتى يصل التأكيد.";
             cartMessage.className = "form-message error";
             return;
@@ -265,7 +266,10 @@ async function initializeCart() {
     if (paymentStatus === "failed") {
         window.accountLibrary?.clearPaymentRequest?.(currentUser, [...cart], returnedPaymentId || null);
     }
-    if (paymentStatus === "return" && returnedPaymentId) watchPaymentStatus(returnedPaymentId, [...cart]);
+    if (paymentStatus === "return" && returnedPaymentId) {
+        window.accountLibrary?.clearPaymentRequest?.(currentUser, [...cart], returnedPaymentId);
+        watchPaymentStatus(returnedPaymentId, [...cart]);
+    }
 }
 
 initializeCart();
