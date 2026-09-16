@@ -190,12 +190,13 @@ async function signup (){
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ name, phone, pass })
         });
-        const data = await response.text();
+        const data = response.ok ? await response.json() : await response.text();
         if (!response.ok) throw new Error(data);
 
-        message.textContent = "تم إنشاء الحساب. سيتم نقلك لتسجيل الدخول...";
+        localStorage.setItem("currentUser", JSON.stringify(data));
+        message.textContent = "تم إنشاء الحساب. سيتم نقلك إلى الصفحة الرئيسية...";
         message.className = "form-message success";
-        setTimeout(() => { window.location.href = "logIn.html"; }, 800);
+        setTimeout(() => { window.location.href = "index.html"; }, 500);
     } catch (error) {
         message.textContent = error.message || "تعذر إنشاء الحساب.";
         message.className = "form-message error";

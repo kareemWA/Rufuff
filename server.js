@@ -1224,7 +1224,7 @@ app.post("/register", async (req, res) => {
         if (existingUser) return res.status(400).send("رقم الهاتف مستخدم بالفعل");
 
         const email = `${phone}@phone.rufuff.local`;
-        await User.create({
+        const user = await User.create({
             name,
             phone,
             email,
@@ -1232,7 +1232,8 @@ app.post("/register", async (req, res) => {
             role: "user"
         });
 
-        res.send("تم استلام البيانات بنجاح");
+        setSessionCookie(res, email);
+        res.status(201).json(publicUser(user));
     } catch (error) {
         res.status(500).send("تعذر الاتصال بقاعدة البيانات");
     }
