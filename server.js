@@ -54,6 +54,7 @@ const bookSchema = new mongoose.Schema({
     author: { type: String, required: true },
     category: { type: String, required: true, trim: true, maxlength: 80 },
     price: { type: Number, required: true, min: 0 },
+    pageCount: { type: Number, min: 1, max: 100000, default: null },
     originalPrice: { type: Number },
     discountPercent: { type: Number, min: 0, max: 90, default: DEFAULT_DISCOUNT_PERCENT },
     seriesId: { type: mongoose.Schema.Types.ObjectId, ref: "Series", default: null },
@@ -195,6 +196,7 @@ async function findBookSummaries(filter = {}, options = {}) {
             author: 1,
             category: 1,
             price: 1,
+            pageCount: 1,
             originalPrice: 1,
             discountPercent: 1,
             seriesId: 1,
@@ -721,17 +723,19 @@ app.delete("/api/admin/series/:seriesId", requireAdmin, async (req, res) => {
 
 app.post("/api/admin/books", requireAdmin, async (req, res) => {
     try {
-        const { title, author, category, price, discountPercent, cover, file, description, seriesId } = req.body;
+        const { title, author, category, price, pageCount, discountPercent, cover, file, description, seriesId } = req.body;
         const normalizedCategory = String(category || "").trim();
         const basePrice = Number(price);
+        const normalizedPageCount = pageCount === "" || pageCount == null ? null : Number(pageCount);
         const discount = Math.min(90, Math.max(0, Number(discountPercent || 0)));
         if (!Number.isFinite(basePrice) || basePrice < 0) return res.status(400).send("السعر يجب أن يكون صفرًا أو أكبر");
+        if (normalizedPageCount !== null && (!Number.isInteger(normalizedPageCount) || normalizedPageCount < 1 || normalizedPageCount > 100000)) return res.status(400).send("عدد الصفحات يجب أن يكون رقمًا صحيحًا بين 1 و100000");
         if (!Number.isFinite(discount)) return res.status(400).send("نسبة الخصم غير صحيحة");
         if (!normalizedCategory || !await Category.exists({ name: normalizedCategory })) return res.status(400).send("التصنيف غير موجود");
         if (typeof cover !== "string" || !/^https:\/\/[^\s]+$/i.test(cover.trim())) return res.status(400).send("رابط صورة الغلاف الخارجي عبر HTTPS مطلوب");
         if (file && !/^https:\/\/[^\s]+$/i.test(String(file).trim())) return res.status(400).send("رابط ملف PDF خارجي عبر HTTPS مطلوب");
         const finalPrice = Math.round(basePrice * (100 - discount) / 100 * 100) / 100;
-        const book = await Book.create({ title, author, category: normalizedCategory, price: finalPrice, originalPrice: basePrice, discountPercent: discount, image: cover, pdfFile: file || null, description, seriesId: seriesId || null });
+        const book = await Book.create({ title, author, category: normalizedCategory, price: finalPrice, pageCount: normalizedPageCount, originalPrice: basePrice, discountPercent: discount, image: cover, pdfFile: file || null, description, seriesId: seriesId || null });
         res.status(201).json(book);
     } catch (error) {
         res.status(400).send("تعذر حفظ الكتاب");

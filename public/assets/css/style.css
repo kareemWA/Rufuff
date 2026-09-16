@@ -74,6 +74,7 @@ body.dark-mode .welcome { background: linear-gradient(120deg, #29453a, #3d3b2f);
 .book-category { color: var(--accent); font-size: 11px; }
 .one_videos h3 { min-height: 47px; margin: 7px 0 4px; font-size: 16px; }
 .one_videos p { min-height: 38px; margin: 0; color: var(--muted); font-size: 12px; }
+.book-pages { display: inline-block; margin-top: 4px; color: var(--muted); font-size: 10px; }
 .price-box, .detail-price-box { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
 .price-box del, .detail-price-box del { color: var(--muted); font-size: 11px; }
 .discount-badge { display: inline-block; border-radius: 5px; padding: 3px 6px; background: rgba(200, 135, 75, .14); color: var(--accent); font-size: 10px; font-weight: 700; }
@@ -151,6 +152,28 @@ body.dark-mode .welcome { background: linear-gradient(120deg, #29453a, #3d3b2f);
 .comment-form textarea { min-height: 110px; padding: 12px; resize: vertical; }
 .comment-form select:focus, .comment-form textarea:focus { border-color: var(--primary); }
 .comment-form .btn { width: auto; margin-top: 16px; }
+
+/* Shared authentication surface */
+.auth-page { position: relative; display: grid; place-items: center; min-height: 100vh; padding: 28px 16px 92px; background: var(--bg) !important; color: var(--text); }
+.auth-page .login-box { width: min(410px, 100%); margin: 0; padding: 30px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface) !important; box-shadow: var(--shadow); text-align: center; }
+.auth-page .login-box img { width: 64px; height: 64px; margin-bottom: 10px; border-radius: 50%; }
+.auth-page .login-box h2 { margin: 0 0 8px; color: var(--primary) !important; font-family: Georgia, serif; font-size: 25px; font-weight: 400; }
+.auth-page .login-box p { color: var(--muted); }
+.auth-page .login-box input { width: 100%; height: 44px; margin-bottom: 12px; padding: 0 13px; border: 1px solid var(--border); border-radius: 9px; outline: 0; background: var(--surface); color: var(--text); font: inherit; font-size: 13px; }
+.auth-page .login-box input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(49, 94, 80, .1); }
+.auth-page .login-box button { width: 100%; height: 44px; margin-top: 2px; border: 0; border-radius: 9px; background: var(--primary); color: #fff; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.auth-page .login-box button:hover { background: var(--primary-dark); transform: none; }
+.auth-page .login-box a { color: var(--primary); font-size: 12px; }
+.auth-page .login-footer { margin-top: 16px; color: var(--muted); font-size: 12px; }
+.auth-page > .site-footer { position: absolute; right: 16px; bottom: 12px; left: 16px; width: auto; margin: 0; }
+
+@media (max-width: 600px) {
+    .auth-page { padding: 20px 12px 82px; }
+    .auth-page .login-box { padding: 24px 18px; border-radius: 15px; }
+    .auth-page .login-box img { width: 54px; height: 54px; }
+    .auth-page .login-box h2 { font-size: 21px; }
+    .auth-page .login-box input, .auth-page .login-box button { height: 42px; font-size: 12px; }
+}
 
 @media (max-width: 650px) {
     .book-detail-main { margin-top: 24px; }
@@ -384,4 +407,20 @@ body.dark-mode .welcome { background: linear-gradient(120deg, #29453a, #3d3b2f);
     .book-footer { display: block; margin-top: 9px; }
     .book-footer .btn { display: block; width: 100%; min-height: 32px; padding: 7px 5px; font-size: 10px; text-align: center; }
     .favorite-toggle { width: 27px; height: 27px; margin: 7px 0 0 auto; font-size: 17px; line-height: 24px; }
+}
+
+/* Final auth sizing overrides */
+.auth-page { padding: 28px 16px 92px !important; }
+.auth-page .login-box { width: min(410px, 100%) !important; padding: 30px !important; }
+.auth-page .login-box img { width: 64px !important; height: 64px !important; }
+.auth-page .login-box h2 { font-size: 25px !important; }
+.auth-page .login-box input { height: 44px !important; font-size: 13px !important; }
+.auth-page .login-box button { height: 44px !important; margin-top: 2px !important; font-size: 13px !important; }
+
+@media (max-width: 600px) {
+    .auth-page { padding: 20px 12px 82px !important; }
+    .auth-page .login-box { padding: 24px 18px !important; border-radius: 15px !important; }
+    .auth-page .login-box img { width: 54px !important; height: 54px !important; }
+    .auth-page .login-box h2 { font-size: 21px !important; }
+    .auth-page .login-box input, .auth-page .login-box button { height: 42px !important; font-size: 12px !important; }
 }

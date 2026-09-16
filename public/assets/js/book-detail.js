@@ -9,6 +9,7 @@ const detailPrice = document.getElementById("detailPrice");
 const detailOriginalPrice = document.getElementById("detailOriginalPrice");
 const detailDiscount = document.getElementById("detailDiscount");
 const detailRating = document.getElementById("detailRating");
+const detailPageCount = document.getElementById("detailPageCount");
 const detailReadCount = document.getElementById("detailReadCount");
 const purchaseStatus = document.getElementById("purchaseStatus");
 const reviewsSummary = document.getElementById("reviewsSummary");
@@ -85,6 +86,7 @@ function renderBook(data) {
     setText(detailOriginalPrice, `${data.originalPrice || data.price} جنيه`);
     setText(detailDiscount, `خصم ${data.discountPercent || 0}%`);
     setText(detailRating, "جاري تحميل التعليقات...");
+    setText(detailPageCount, data.pageCount ? `${data.pageCount} صفحة` : "عدد الصفحات غير محدد");
     setText(detailReadCount, `${data.readCount || 0} قراءة`);
     document.title = `${data.title} | رفوف`;
     updateFavoriteButton();
