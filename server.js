@@ -607,6 +607,26 @@ async function uploadToObjectStorage(file, folder) {
     return `${SUPABASE_PUBLIC_URL}/${key.split("/").map(encodeURIComponent).join("/")}`;
 }
 
+async function deleteFromObjectStorage(fileUrl) {
+    if (!fileUrl || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return;
+    const publicPrefix = `${SUPABASE_PUBLIC_URL}/`;
+    if (!fileUrl.startsWith(publicPrefix)) return;
+    const objectPath = fileUrl.slice(publicPrefix.length).split("?")[0]
+        .split("/").map(part => decodeURIComponent(part)).join("/");
+    if (!objectPath) return;
+    const deleteUrl = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(SUPABASE_STORAGE_BUCKET)}/remove`;
+    const response = await fetch(deleteUrl, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            apikey: SUPABASE_SERVICE_ROLE_KEY,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ prefixes: [objectPath] })
+    });
+    if (!response.ok) throw new Error(`تعذر حذف الملف من Supabase Storage: ${await response.text()}`);
+}
+
 app.post("/api/admin/uploads", requireAdmin, (req, res, next) => {
     adminUpload.fields([{ name: "coverFile", maxCount: 1 }, { name: "fileUpload", maxCount: 1 }])(req, res, error => {
         if (error) return res.status(400).send(error.code === "LIMIT_FILE_SIZE" ? "حجم الملف كبير جدًا" : "ملف غير صالح");
@@ -644,6 +664,9 @@ app.delete("/api/admin/categories/:categoryId", requireAdmin, async (req, res) =
 app.delete("/api/admin/books/:bookId", requireAdmin, async (req, res) => {
     try {
         const bookId = new mongoose.Types.ObjectId(req.params.bookId);
+        const book = await Book.findOne({ _id: bookId }).select("image pdfFile").lean();
+        if (!book) return res.status(404).send("الكتاب غير موجود أو محذوف بالفعل");
+        await Promise.all([deleteFromObjectStorage(book.image), deleteFromObjectStorage(book.pdfFile)]);
 
         const deletedBook = await Book.findOneAndDelete({ _id: bookId });
         if (!deletedBook) return res.status(404).send("الكتاب غير موجود أو محذوف بالفعل");
