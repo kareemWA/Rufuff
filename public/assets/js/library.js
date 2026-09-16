@@ -81,8 +81,19 @@
         }
     }
 
+    function notifyPaymentStateChanged() {
+        try {
+            window.dispatchEvent(new CustomEvent("paymentStateChanged", { detail: { at: Date.now() } }));
+        } catch {
+            // Ignore any DOM event issues in unsupported contexts.
+        }
+    }
+
     function writePaymentState(user, state) {
-        if (user?.email) writeLocal("paymentState", state, user.email);
+        if (user?.email) {
+            writeLocal("paymentState", state, user.email);
+            notifyPaymentStateChanged();
+        }
     }
 
     function savePaymentRequest(user, books, paymentId) {
