@@ -140,6 +140,20 @@
         writePaymentState(user, state);
     }
 
+    function setPaymentFailureNotice(user, book, ttlMs = 5000) {
+        const state = readPaymentState(user);
+        const id = String(book?._id || book);
+        state.records[id] = { bookId: id, status: "failed", rejectionReason: null, paymentId: null };
+        writePaymentState(user, state);
+        window.setTimeout(() => {
+            const latest = readPaymentState(user);
+            if (latest.records[id]?.status === "failed") {
+                delete latest.records[id];
+                writePaymentState(user, latest);
+            }
+        }, ttlMs);
+    }
+
     function clearLegacyLocalData() {
         localStorage.removeItem("bookCart");
         localStorage.removeItem("favoriteBooks");
@@ -231,6 +245,7 @@
         savePaymentRequest,
         clearPaymentRequest,
         syncPaymentState,
-        markPaymentRecord
+        markPaymentRecord,
+        setPaymentFailureNotice
     };
 })();

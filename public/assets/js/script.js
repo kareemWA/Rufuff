@@ -253,6 +253,15 @@ async function refreshPurchasedBooks(visibleBooks) {
         const localRecord = localRecords[String(book._id)];
         const isPending = purchaseState.pendingIds.has(String(book._id));
         const isPurchased = purchaseState.purchasedIds.has(String(book._id));
+        if (localRecord?.status === "failed") {
+            const button = card.querySelector(".buy-book");
+            const message = card.querySelector(".book-message");
+            if (button) button.remove();
+            message.textContent = "لم يكتمل الدفع";
+            message.className = "book-message error";
+            return;
+        }
+
         if (localRecord?.status === "pending" || localRecord?.status === "paid") {
             const button = card.querySelector(".buy-book");
             const message = card.querySelector(".book-message");

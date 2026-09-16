@@ -38,6 +38,7 @@ if (paymentStatus === "paid") {
     cartMessage.textContent = "تم الدفع بنجاح. سيتم تحديث كتبك المشتراة.";
     cartMessage.className = "form-message success";
 } else if (paymentStatus === "failed") {
+    window.accountLibrary?.clearPaymentRequest?.(currentUser, [], returnedPaymentId || null);
     cartMessage.textContent = "لم يكتمل الدفع، والكتب ما زالت في السلة.";
     cartMessage.className = "form-message error";
 } else if (paymentStatus === "return") {
@@ -229,6 +230,7 @@ function watchPaymentStatus(paymentId, submittedBooks) {
             cart = submittedBooks;
             await window.accountLibrary.save(currentUser, cart, favorites);
             renderCart();
+            submittedBooks.forEach(book => window.accountLibrary.setPaymentFailureNotice?.(currentUser, book, 5000));
             showPaymentToast("لم يتم شراء الكتاب. لم يتم دفع قيمة الكتاب ولم يتم فتحه.", true, 5000);
             cartMessage.textContent = "";
             cartMessage.className = "form-message";
@@ -260,6 +262,9 @@ async function initializeCart() {
     cart = library.cart;
     favorites = library.favorites;
     renderCart();
+    if (paymentStatus === "failed") {
+        window.accountLibrary?.clearPaymentRequest?.(currentUser, [...cart], returnedPaymentId || null);
+    }
     if (paymentStatus === "return" && returnedPaymentId) watchPaymentStatus(returnedPaymentId, [...cart]);
 }
 
