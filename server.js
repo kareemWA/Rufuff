@@ -4,7 +4,6 @@ const helmet = require("helmet");
 const compression = require("compression");
 const { rateLimit } = require("express-rate-limit");
 const multer = require("multer");
-const { PutObjectCommand, S3Client } = require("@aws-sdk/client-s3");
 require("dotenv").config();
 const path = require("path");
 const fs = require("fs");
@@ -24,20 +23,10 @@ const SESSION_SECRET = process.env.SESSION_SECRET || (process.env.NODE_ENV === "
 const KASHIER_SECRET_KEY = process.env.KASHIER_SECRET_KEY || "";
 const KASHIER_API_KEY = process.env.KASHIER_API_KEY || "";
 const KASHIER_MERCHANT_ID = process.env.KASHIER_MERCHANT_ID || "";
-const STORAGE_ENDPOINT = process.env.STORAGE_ENDPOINT || "";
-const STORAGE_REGION = process.env.STORAGE_REGION || "auto";
-const STORAGE_BUCKET = process.env.STORAGE_BUCKET || "";
-const STORAGE_PUBLIC_BASE_URL = (process.env.STORAGE_PUBLIC_BASE_URL || "").replace(/\/$/, "");
-const storageClient = STORAGE_ENDPOINT && process.env.STORAGE_ACCESS_KEY_ID && process.env.STORAGE_SECRET_ACCESS_KEY
-    ? new S3Client({
-        endpoint: STORAGE_ENDPOINT,
-        region: STORAGE_REGION,
-        credentials: {
-            accessKeyId: process.env.STORAGE_ACCESS_KEY_ID,
-            secretAccessKey: process.env.STORAGE_SECRET_ACCESS_KEY
-        }
-    })
-    : null;
+const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const SUPABASE_STORAGE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "rufuff-books";
+const SUPABASE_PUBLIC_URL = (process.env.SUPABASE_PUBLIC_URL || `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_STORAGE_BUCKET}`).replace(/\/$/, "");
 const adminUpload = multer({
     storage: multer.memoryStorage(),
     limits: { files: 2, fileSize: 50 * 1024 * 1024 },
@@ -590,21 +579,32 @@ app.post("/api/admin/categories", requireAdmin, async (req, res) => {
 });
 
 async function uploadToObjectStorage(file, folder) {
-    if (!storageClient || !STORAGE_BUCKET || !STORAGE_PUBLIC_BASE_URL) {
-        throw new Error("لم يتم إعداد Object Storage على الخادم");
+    const missingStorageSettings = [
+        ["SUPABASE_URL", SUPABASE_URL],
+        ["SUPABASE_SERVICE_ROLE_KEY", SUPABASE_SERVICE_ROLE_KEY],
+        ["SUPABASE_STORAGE_BUCKET", SUPABASE_STORAGE_BUCKET]
+    ].filter(([, value]) => !value).map(([name]) => name);
+    if (missingStorageSettings.length) {
+        throw new Error(`إعدادات Supabase Storage ناقصة: ${missingStorageSettings.join(", ")}`);
     }
     const extension = file.mimetype === "application/pdf"
         ? "pdf"
         : file.mimetype.split("/")[1].replace("jpeg", "jpg");
     const key = `${folder}/${Date.now()}-${crypto.randomUUID()}.${extension}`;
-    await storageClient.send(new PutObjectCommand({
-        Bucket: STORAGE_BUCKET,
-        Key: key,
-        Body: file.buffer,
-        ContentType: file.mimetype,
-        CacheControl: "public, max-age=31536000, immutable"
-    }));
-    return `${STORAGE_PUBLIC_BASE_URL}/${key.split("/").map(encodeURIComponent).join("/")}`;
+    const uploadUrl = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(SUPABASE_STORAGE_BUCKET)}/${key.split("/").map(encodeURIComponent).join("/")}`;
+    const response = await fetch(uploadUrl, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            apikey: SUPABASE_SERVICE_ROLE_KEY,
+            "Content-Type": file.mimetype,
+            "Cache-Control": "public, max-age=31536000, immutable",
+            "x-upsert": "false"
+        },
+        body: file.buffer
+    });
+    if (!response.ok) throw new Error(`تعذر رفع الملف إلى Supabase Storage: ${await response.text()}`);
+    return `${SUPABASE_PUBLIC_URL}/${key.split("/").map(encodeURIComponent).join("/")}`;
 }
 
 app.post("/api/admin/uploads", requireAdmin, (req, res, next) => {
@@ -623,8 +623,8 @@ app.post("/api/admin/uploads", requireAdmin, (req, res, next) => {
         ]);
         res.status(201).json({ cover, file });
     } catch (error) {
-        console.error("Object Storage upload error:", error.message);
-        res.status(503).send(error.message || "تعذر رفع الملفات إلى Object Storage");
+        console.error("Supabase Storage upload error:", error.message);
+        res.status(503).send(error.message || "تعذر رفع الملفات إلى Supabase Storage");
     }
 });
 
