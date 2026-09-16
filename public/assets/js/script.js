@@ -174,19 +174,28 @@ function createBookCard(book, index = 0) {
 
     article.querySelector(".favorite-toggle").addEventListener("click", async event => {
         if (redirectGuest(event)) return;
+        const favoriteButton = event.currentTarget;
         const isFavorite = favorites.some(item => item._id === book._id);
         favorites = isFavorite
             ? favorites.filter(item => item._id !== book._id)
             : [...favorites, book];
-        const saved = await window.accountLibrary.save(currentUser, cart, favorites);
-        event.currentTarget.textContent = isFavorite ? "♡" : "♥";
-        event.currentTarget.classList.toggle("is-favorite", !isFavorite);
-        event.currentTarget.setAttribute("aria-label", isFavorite ? `إزالة ${book.title} من المفضلة` : `إضافة ${book.title} للمفضلة`);
+        favoriteButton.textContent = isFavorite ? "♡" : "♥";
+        favoriteButton.classList.toggle("is-favorite", !isFavorite);
+        favoriteButton.setAttribute("aria-label", isFavorite ? `إضافة ${book.title} للمفضلة` : `إزالة ${book.title} من المفضلة`);
         const message = article.querySelector(".book-message");
-        message.textContent = saved
-            ? (isFavorite ? "تمت إزالة الكتاب من المفضلة." : "تمت إضافة الكتاب إلى المفضلة.")
-            : "تعذر حفظ المفضلة. تحقق من اتصال الموقع.";
-        message.className = `book-message ${saved ? "success" : "error"}`;
+        message.textContent = isFavorite ? "تمت إزالة الكتاب من المفضلة." : "تمت إضافة الكتاب إلى المفضلة.";
+        message.className = "book-message success";
+        const saved = await window.accountLibrary.save(currentUser, cart, favorites);
+        if (!saved) {
+            favorites = isFavorite
+                ? [...favorites, book]
+                : favorites.filter(item => item._id !== book._id);
+            favoriteButton.textContent = isFavorite ? "♥" : "♡";
+            favoriteButton.classList.toggle("is-favorite", isFavorite);
+            favoriteButton.setAttribute("aria-label", isFavorite ? `إزالة ${book.title} من المفضلة` : `إضافة ${book.title} للمفضلة`);
+            message.textContent = "تعذر حفظ المفضلة. تحقق من اتصال الموقع.";
+            message.className = "book-message error";
+        }
     });
 
     if (favorites.some(item => item._id === book._id)) {
