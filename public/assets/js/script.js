@@ -372,16 +372,7 @@ async function loadCategories() {
 }
 
 if (searchInput) {
-    searchInput.addEventListener("input", () => {
-        const value = (searchInput.value || "").trim();
-        const shouldFocusTopSearch = /مكتبة\s*رفوف|رفوف/i.test(value);
-        if (shouldFocusTopSearch) {
-            window.scrollTo({ top: 0, behavior: "smooth" });
-            searchInput.focus();
-            searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
-        }
-        renderBooks();
-    });
+    searchInput.addEventListener("input", renderBooks);
 }
 window.addEventListener("paymentStateChanged", () => {
     if (books.length) {
