@@ -20,7 +20,7 @@ function setCouponStatus(text, state = "") {
     couponStatus.className = `coupon-status${state ? ` ${state}` : ""}`;
 }
 
-function showPaymentToast(message, error = false) {
+function showPaymentToast(message, error = false, duration = 5000) {
     const toast = document.createElement("div");
     toast.className = `payment-toast${error ? " error" : ""}`;
     toast.setAttribute("role", "status");
@@ -28,6 +28,7 @@ function showPaymentToast(message, error = false) {
     toast.querySelector("span").textContent = message;
     toast.querySelector("button").addEventListener("click", () => toast.remove());
     document.body.appendChild(toast);
+    window.setTimeout(() => toast.remove(), duration);
     return toast;
 }
 
@@ -214,20 +215,27 @@ function watchPaymentStatus(paymentId, submittedBooks) {
             window.accountLibrary.syncPaymentState(currentUser, [payment], submittedBooks);
             window.clearInterval(interval);
             if (payment.status === "paid") {
+                window.accountLibrary.clearPaymentRequest(currentUser, submittedBooks, paymentId);
                 cart = [];
                 await window.accountLibrary.save(currentUser, [], favorites);
                 renderCart();
+                showPaymentToast("تم فتح الكتاب بنجاح.", false, 5000);
                 cartMessage.textContent = "تم الدفع بنجاح. تم فتح كتبك المشتراة.";
                 cartMessage.className = "form-message success";
-                window.setTimeout(() => { window.location.href = "purchased.html"; }, 700);
+                window.setTimeout(() => { window.location.href = "purchased.html"; }, 5000);
                 return;
             }
+            window.accountLibrary.clearPaymentRequest(currentUser, submittedBooks, paymentId);
             cart = submittedBooks;
             await window.accountLibrary.save(currentUser, cart, favorites);
             renderCart();
-            showPaymentToast(`فشلت عملية الدفع. السبب: ${payment.rejectionReason || "لم يتم تأكيد العملية"}. يمكنك المحاولة مرة أخرى.`, true);
-            cartMessage.textContent = "فشلت عملية الدفع، وتمت إعادة الكتب إلى السلة.";
-            cartMessage.className = "form-message error";
+            showPaymentToast("لم يتم شراء الكتاب. لم يتم دفع قيمة الكتاب ولم يتم فتحه.", true, 5000);
+            cartMessage.textContent = "";
+            cartMessage.className = "form-message";
+            window.setTimeout(() => {
+                cartMessage.textContent = "";
+                cartMessage.className = "form-message";
+            }, 5000);
         } catch (error) {
             // Keep the local pending state and retry on the next interval.
         } finally {

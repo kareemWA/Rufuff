@@ -72,8 +72,8 @@ body.dark-mode .welcome { background: linear-gradient(120deg, #29453a, #3d3b2f);
 .book-cover { width: 100%; height: 245px; border-radius: 10px; object-fit: cover; }
 .book-info { padding: 7px 4px 2px; }
 .book-category { color: var(--accent); font-size: 11px; }
-.one_videos h3 { min-height: 47px; margin: 7px 0 4px; font-size: 16px; }
-.one_videos p { min-height: 38px; margin: 0; color: var(--muted); font-size: 12px; }
+.one_videos h3 { min-height: 36px; margin: 7px 0 4px; font-size: 14px; line-height: 1.45; }
+.one_videos p { min-height: 28px; margin: 0; color: var(--muted); font-size: 12px; }
 .book-pages { display: inline-block; margin-top: 4px; color: var(--muted); font-size: 10px; }
 .price-box, .detail-price-box { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
 .price-box del, .detail-price-box del { color: var(--muted); font-size: 11px; }
@@ -219,7 +219,7 @@ body.dark-mode .welcome { background: linear-gradient(120deg, #29453a, #3d3b2f);
     .book-cover { height: auto; aspect-ratio: 4 / 5; border-radius: 8px; }
     .book-info { padding: 5px 2px 1px; }
     .book-category { font-size: 10px; }
-    .one_videos h3 { min-height: 32px; margin: 4px 0 2px; font-size: 13px; line-height: 1.35; }
+    .one_videos h3 { min-height: 26px; margin: 4px 0 2px; font-size: 12px; line-height: 1.35; }
     .one_videos p { min-height: 0; font-size: 10px; }
     .book-footer { display: block; margin-top: 7px; }
     .price { display: block; margin-bottom: 5px; font-size: 12px; }
@@ -371,7 +371,7 @@ body.dark-mode .welcome { background: linear-gradient(120deg, #29453a, #3d3b2f);
 .one_videos { padding: 10px; border-color: rgba(49, 94, 80, .12); box-shadow: 0 10px 28px rgba(49, 67, 54, .07); }
 .one_videos:hover { transform: translateY(-4px); box-shadow: 0 18px 34px rgba(49, 67, 54, .13); }
 .book-cover { height: 250px; border-radius: 9px; }
-.one_videos h3 { color: var(--text); line-height: 1.5; }
+.one_videos h3 { color: var(--text); line-height: 1.35; }
 .book-footer { margin-top: 13px; }
 .book-footer .btn { min-height: 36px; padding: 8px 12px; }
 
@@ -398,8 +398,8 @@ body.dark-mode .welcome { background: linear-gradient(120deg, #29453a, #3d3b2f);
     .book-cover { height: 170px; border-radius: 8px; }
     .book-info { padding: 5px 2px 0; }
     .book-category { font-size: 9px; }
-    .one_videos h3 { min-height: 38px; margin: 5px 0 2px; font-size: 12px; line-height: 1.45; }
-    .one_videos p { min-height: 28px; font-size: 10px; }
+    .one_videos h3 { min-height: 28px; margin: 5px 0 2px; font-size: 11px; line-height: 1.4; }
+    .one_videos p { min-height: 22px; font-size: 10px; }
     .price-box { gap: 4px; }
     .price { font-size: 11px; }
     .price-box del { font-size: 9px; }

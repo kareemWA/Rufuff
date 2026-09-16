@@ -92,6 +92,19 @@
         writePaymentState(user, state);
     }
 
+    function clearPaymentRequest(user, books = [], paymentId = null) {
+        if (!user?.email) return { records: {}, statuses: {} };
+        const state = readPaymentState(user);
+        const ids = new Set((books || []).map(book => String(book?._id || book)));
+        Object.keys(state.records).forEach(id => {
+            if (!ids.size || ids.has(id)) delete state.records[id];
+        });
+        if (paymentId) delete state.statuses[String(paymentId)];
+        writeLocalValue("paymentStatuses", state.statuses);
+        writePaymentState(user, state);
+        return state;
+    }
+
     function syncPaymentState(user, payments, books = []) {
         const state = readPaymentState(user);
         const latestPaymentsByBook = new Map();
@@ -208,5 +221,16 @@
         return saveQueue;
     }
 
-    window.accountLibrary = { load, save, getBooks: () => booksCache, clearLegacyLocalData, clearUserData, readPaymentState, savePaymentRequest, syncPaymentState, markPaymentRecord };
+    window.accountLibrary = {
+        load,
+        save,
+        getBooks: () => booksCache,
+        clearLegacyLocalData,
+        clearUserData,
+        readPaymentState,
+        savePaymentRequest,
+        clearPaymentRequest,
+        syncPaymentState,
+        markPaymentRecord
+    };
 })();
