@@ -25,13 +25,29 @@ let pageNumPending = null;
 let currentScale = 1.2;
 
 async function ensurePdfJs() {
-    try {
-        const pdfjsLib = await import("/vendor/pdfjs/pdf.min.mjs");
-        pdfjsLib.GlobalWorkerOptions.workerSrc = "/vendor/pdfjs/pdf.worker.min.mjs";
-        return pdfjsLib;
-    } catch (error) {
-        throw new Error("تعذر تحميل مكتبة PDF.js على Vercel. تأكد من وجود الملفات في public/vendor/pdfjs");
+    const candidates = [
+        {
+            module: "/vendor/pdfjs/pdf.min.mjs",
+            worker: "/vendor/pdfjs/pdf.worker.min.mjs"
+        },
+        {
+            module: "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.min.mjs",
+            worker: "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.worker.min.mjs"
+        }
+    ];
+
+    let lastError = null;
+    for (const candidate of candidates) {
+        try {
+            const pdfjsLib = await import(candidate.module);
+            pdfjsLib.GlobalWorkerOptions.workerSrc = candidate.worker;
+            return pdfjsLib;
+        } catch (error) {
+            lastError = error;
+        }
     }
+
+    throw new Error(lastError?.message || "تعذر تحميل مكتبة PDF.js على Vercel.");
 }
 
 function showError(message) {
