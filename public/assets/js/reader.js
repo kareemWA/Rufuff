@@ -25,29 +25,19 @@ let pageNumPending = null;
 let currentScale = 1.2;
 
 async function ensurePdfJs() {
-    const candidates = [
-        {
-            module: "/vendor/pdfjs/pdf.min.mjs",
-            worker: "/vendor/pdfjs/pdf.worker.min.mjs"
-        },
-        {
-            module: "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.min.mjs",
-            worker: "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.worker.min.mjs"
-        }
-    ];
+    const moduleUrl = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.min.mjs";
+    const workerUrl = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.worker.min.mjs";
+    const cMapUrl = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/cmaps/";
 
-    let lastError = null;
-    for (const candidate of candidates) {
-        try {
-            const pdfjsLib = await import(candidate.module);
-            pdfjsLib.GlobalWorkerOptions.workerSrc = candidate.worker;
-            return pdfjsLib;
-        } catch (error) {
-            lastError = error;
-        }
+    try {
+        const pdfjsLib = await import(moduleUrl);
+        pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+        pdfjsLib.GlobalWorkerOptions.cMapUrl = cMapUrl;
+        pdfjsLib.GlobalWorkerOptions.cMapPacked = true;
+        return pdfjsLib;
+    } catch (error) {
+        throw new Error("تعذر تحميل مكتبة PDF.js من CDN.");
     }
-
-    throw new Error(lastError?.message || "تعذر تحميل مكتبة PDF.js على Vercel.");
 }
 
 function showError(message) {
@@ -158,7 +148,11 @@ async function loadReader() {
 
         const pdfjsLib = await ensurePdfJs();
         const pdfBytes = await pdfResponse.arrayBuffer();
-        const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(pdfBytes) });
+        const loadingTask = pdfjsLib.getDocument({
+            data: new Uint8Array(pdfBytes),
+            cMapUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/cmaps/",
+            cMapPacked: true
+        });
         pdfDoc = await loadingTask.promise;
 
         readerFrameWrap.hidden = false;
