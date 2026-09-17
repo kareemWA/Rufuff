@@ -18,15 +18,56 @@ if (!currentUser?.email) {
     window.location.href = `signin.html?return=${encodeURIComponent(returnUrl)}`;
 }
 
-if (window.pdfjsLib) {
-    window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.5.136/pdf.worker.min.js";
-}
-
 let pdfDoc = null;
 let pageNum = 1;
 let pageRendering = false;
 let pageNumPending = null;
 let currentScale = 1.2;
+
+async function ensurePdfJs() {
+    if (window.pdfjsLib) {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.5.136/pdf.worker.min.js";
+        return window.pdfjsLib;
+    }
+
+    await new Promise((resolve, reject) => {
+        const existingScript = document.querySelector("script[data-pdfjs-lib]");
+        const script = existingScript || document.createElement("script");
+
+        if (!existingScript) {
+            script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.5.136/pdf.min.js";
+            script.async = true;
+            script.setAttribute("data-pdfjs-lib", "true");
+            script.onload = () => {
+                if (window.pdfjsLib) {
+                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.5.136/pdf.worker.min.js";
+                    resolve();
+                    return;
+                }
+                reject(new Error("تعذر تحميل مكتبة PDF.js."));
+            };
+            script.onerror = () => reject(new Error("تعذر تحميل مكتبة PDF.js. تأكد من اتصال الإنترنت."));
+            document.head.appendChild(script);
+            return;
+        }
+
+        script.addEventListener("load", () => {
+            if (window.pdfjsLib) {
+                window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.5.136/pdf.worker.min.js";
+                resolve();
+                return;
+            }
+            reject(new Error("تعذر تحميل مكتبة PDF.js."));
+        }, { once: true });
+        script.addEventListener("error", () => reject(new Error("تعذر تحميل مكتبة PDF.js. تأكد من اتصال الإنترنت.")), { once: true });
+    });
+
+    if (!window.pdfjsLib) {
+        throw new Error("تعذر تحميل مكتبة PDF.js.");
+    }
+
+    return window.pdfjsLib;
+}
 
 function showError(message) {
     readerStatus.textContent = message;
@@ -134,8 +175,9 @@ async function loadReader() {
         const pdfResponse = await fetch(accessUrl, { headers: { Accept: "application/pdf" } });
         if (!pdfResponse.ok) throw new Error("تعذر تحميل ملف PDF.");
 
+        const pdfjsLib = await ensurePdfJs();
         const pdfBytes = await pdfResponse.arrayBuffer();
-        const loadingTask = window.pdfjsLib.getDocument({ data: new Uint8Array(pdfBytes) });
+        const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(pdfBytes) });
         pdfDoc = await loadingTask.promise;
 
         readerFrameWrap.hidden = false;
