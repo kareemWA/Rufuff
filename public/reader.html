@@ -27,15 +27,8 @@
             <a id="readerDownload" class="download-link" href="#" target="_blank" rel="noopener" hidden>تحميل PDF</a>
         </div>
         <p id="readerStatus" class="detail-status">جارٍ تجهيز الكتاب...</p>
-        <div id="readerControls" class="reader-controls" hidden>
-            <button type="button" id="prevPageBtn" aria-label="الصفحة السابقة">السابق</button>
-            <span id="pageIndicator">0 / 0</span>
-            <button type="button" id="nextPageBtn" aria-label="الصفحة التالية">التالي</button>
-            <button type="button" id="zoomOutBtn" aria-label="تصغير">-</button>
-            <button type="button" id="zoomInBtn" aria-label="تكبير">+</button>
-        </div>
         <div id="readerFrameWrap" class="reader-frame-wrap" hidden>
-            <canvas id="pdfCanvas" aria-label="مستند PDF"></canvas>
+            <iframe id="readerFrame" title="قارئ PDF" src="about:blank"></iframe>
         </div>
     </main>
     <footer class="site-footer">
@@ -43,42 +36,21 @@
         <div><a href="tel:01016355675">01016355675</a><a href="mailto:kareemgera1@gmail.com">kareemgera1@gmail.com</a></div>
     </footer>
     <style>
-        .reader-controls {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-            margin: 1rem 0 1.5rem;
-        }
-        .reader-controls button {
-            border: 0;
-            background: #1b3d5f;
-            color: #fff;
-            border-radius: 999px;
-            padding: 0.55rem 1rem;
-            cursor: pointer;
-            font: inherit;
-        }
-        .reader-controls button:hover {
-            background: #102c46;
-        }
         .reader-frame-wrap {
-            overflow: auto;
             background: #f4f1ec;
             border: 1px solid rgba(27, 61, 95, 0.12);
             border-radius: 18px;
-            padding: 1rem;
-            min-height: 60vh;
+            padding: 0.5rem;
+            min-height: 75vh;
         }
-        #pdfCanvas {
-            display: block;
-            margin: 0 auto;
-            max-width: 100%;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+        #readerFrame {
+            width: 100%;
+            min-height: 75vh;
+            border: 0;
             background: #fff;
+            border-radius: 14px;
         }
     </style>
-    <script src="assets/js/reader.js?v=5"></script>
+    <script src="assets/js/reader.js?v=6"></script>
 </body>
 </html>
