@@ -25,48 +25,13 @@ let pageNumPending = null;
 let currentScale = 1.2;
 
 async function ensurePdfJs() {
-    if (window.pdfjsLib) {
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.5.136/pdf.worker.min.js";
-        return window.pdfjsLib;
+    try {
+        const pdfjsLib = await import("/node_modules/pdfjs-dist/build/pdf.mjs");
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "/node_modules/pdfjs-dist/build/pdf.worker.min.mjs";
+        return pdfjsLib;
+    } catch (error) {
+        throw new Error("تعذر تحميل مكتبة PDF.js محليًا.");
     }
-
-    await new Promise((resolve, reject) => {
-        const existingScript = document.querySelector("script[data-pdfjs-lib]");
-        const script = existingScript || document.createElement("script");
-
-        if (!existingScript) {
-            script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.5.136/pdf.min.js";
-            script.async = true;
-            script.setAttribute("data-pdfjs-lib", "true");
-            script.onload = () => {
-                if (window.pdfjsLib) {
-                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.5.136/pdf.worker.min.js";
-                    resolve();
-                    return;
-                }
-                reject(new Error("تعذر تحميل مكتبة PDF.js."));
-            };
-            script.onerror = () => reject(new Error("تعذر تحميل مكتبة PDF.js. تأكد من اتصال الإنترنت."));
-            document.head.appendChild(script);
-            return;
-        }
-
-        script.addEventListener("load", () => {
-            if (window.pdfjsLib) {
-                window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.5.136/pdf.worker.min.js";
-                resolve();
-                return;
-            }
-            reject(new Error("تعذر تحميل مكتبة PDF.js."));
-        }, { once: true });
-        script.addEventListener("error", () => reject(new Error("تعذر تحميل مكتبة PDF.js. تأكد من اتصال الإنترنت.")), { once: true });
-    });
-
-    if (!window.pdfjsLib) {
-        throw new Error("تعذر تحميل مكتبة PDF.js.");
-    }
-
-    return window.pdfjsLib;
 }
 
 function showError(message) {
