@@ -1206,7 +1206,18 @@ app.get("/api/books/:bookId/access", downloadLimiter, async (req, res) => {
             if (!purchase) return res.status(403).send("يجب شراء الكتاب أولًا");
         }
         if (!/^https:\/\//i.test(book.pdfFile)) return res.status(410).send("ملف الكتاب يجب أن يكون على تخزين خارجي آمن");
-        res.redirect(book.pdfFile);
+
+        const pdfResponse = await fetch(book.pdfFile);
+        if (!pdfResponse.ok) return res.status(502).send("تعذر تحميل ملف PDF من التخزين الخارجي");
+
+        const pdfBuffer = Buffer.from(await pdfResponse.arrayBuffer());
+        const filename = `${(book.title || "book").replace(/[^\w\s-]/g, "").trim() || "book"}.pdf`;
+        res.setHeader("Content-Type", pdfResponse.headers.get("content-type") || "application/pdf");
+        res.setHeader("Content-Length", String(pdfBuffer.length));
+        if (req.query.download === "1") {
+            res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(filename)}"`);
+        }
+        res.send(pdfBuffer);
     } catch (error) {
         res.status(500).send("تعذر فتح الكتاب");
     }
