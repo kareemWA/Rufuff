@@ -370,7 +370,6 @@ app.disable("x-powered-by");
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(compression());
 app.use(express.static(path.join(__dirname, "public")));
-app.use("/vendor/pdfjs", express.static(path.join(__dirname, "node_modules", "pdfjs-dist", "build")));
 app.use(express.static(__dirname));
 app.use(express.json({ limit: "20mb" }));
 

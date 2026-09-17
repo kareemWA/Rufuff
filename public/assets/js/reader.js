@@ -30,7 +30,7 @@ async function ensurePdfJs() {
         pdfjsLib.GlobalWorkerOptions.workerSrc = "/vendor/pdfjs/pdf.worker.min.mjs";
         return pdfjsLib;
     } catch (error) {
-        throw new Error("تعذر تحميل مكتبة PDF.js محليًا.");
+        throw new Error("تعذر تحميل مكتبة PDF.js على Vercel. تأكد من وجود الملفات في public/vendor/pdfjs");
     }
 }
 
