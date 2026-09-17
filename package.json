@@ -18,6 +18,7 @@
     "express-rate-limit": "^8.7.0",
     "helmet": "^8.3.0",
     "mongoose": "^9.9.5",
-    "multer": "^2.0.2"
+    "multer": "^2.0.2",
+    "pdfjs-dist": "^6.3.289"
   }
 }

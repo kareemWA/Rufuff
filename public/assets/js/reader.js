@@ -26,8 +26,8 @@ let currentScale = 1.2;
 
 async function ensurePdfJs() {
     try {
-        const pdfjsLib = await import("/node_modules/pdfjs-dist/build/pdf.mjs");
-        pdfjsLib.GlobalWorkerOptions.workerSrc = "/node_modules/pdfjs-dist/build/pdf.worker.min.mjs";
+        const pdfjsLib = await import("/vendor/pdfjs/pdf.min.mjs");
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "/vendor/pdfjs/pdf.worker.min.mjs";
         return pdfjsLib;
     } catch (error) {
         throw new Error("تعذر تحميل مكتبة PDF.js محليًا.");
