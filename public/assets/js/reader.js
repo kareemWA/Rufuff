@@ -19,7 +19,7 @@ function normalizeGoogleDrivePdfUrl(url) {
         const parsed = new URL(url);
         const fileId = parsed.searchParams.get("id") || parsed.pathname.match(/\/file\/d\/([^/]+)/i)?.[1];
         if ((parsed.hostname === "drive.google.com" || parsed.hostname === "docs.google.com") && fileId) {
-            return `https://drive.google.com/uc?export=view&id=${encodeURIComponent(fileId)}`;
+            return `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview?embedded=true`;
         }
     } catch {
         // Ignore invalid URLs and keep the original value.
@@ -64,7 +64,13 @@ async function loadReader() {
 
         readerDownload.href = `${accessUrl}?download=1`;
         readerDownload.hidden = false;
-        readerFrame.src = viewerUrl;
+
+        readerFrame.innerHTML = "";
+        const pdfEmbedded = window.PDFObject && PDFObject.embed(viewerUrl, "#readerFrame");
+        if (!pdfEmbedded) {
+            readerFrame.innerHTML = `<embed src="${viewerUrl}" type="application/pdf" style="width:100%;height:70vh;border:0;" />`;
+        }
+
         readerFrameWrap.hidden = false;
         readerControls.hidden = true;
         readerStatus.hidden = true;
@@ -74,8 +80,12 @@ async function loadReader() {
     }
 }
 
-if (prevPageBtn) prevPageBtn.addEventListener("click", () => readerFrame.contentWindow?.history?.back?.());
-if (nextPageBtn) nextPageBtn.addEventListener("click", () => readerFrame.contentWindow?.history?.forward?.());
+if (prevPageBtn) prevPageBtn.addEventListener("click", () => {
+    if (readerFrame?.contentWindow) readerFrame.contentWindow.history.back();
+});
+if (nextPageBtn) nextPageBtn.addEventListener("click", () => {
+    if (readerFrame?.contentWindow) readerFrame.contentWindow.history.forward();
+});
 if (zoomOutBtn) zoomOutBtn.addEventListener("click", () => { if (readerFrame) readerFrame.style.transform = "scale(0.9)"; });
 if (zoomInBtn) zoomInBtn.addEventListener("click", () => { if (readerFrame) readerFrame.style.transform = "scale(1.1)"; });
 
