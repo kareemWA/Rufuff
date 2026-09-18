@@ -47,31 +47,31 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.6rem;
+            gap: 0.55rem;
             flex-wrap: wrap;
             margin: 1rem auto 1.5rem;
             padding: 0.7rem 0.8rem;
-            background: rgba(27, 61, 95, 0.05);
-            border: 1px solid rgba(27, 61, 95, 0.12);
+            background: rgba(49, 94, 80, 0.06);
+            border: 1px solid rgba(49, 94, 80, 0.12);
             border-radius: 16px;
             max-width: 480px;
-            box-shadow: 0 6px 16px rgba(27, 61, 95, 0.08);
+            box-shadow: 0 6px 14px rgba(49, 94, 80, 0.08);
         }
         .reader-controls button {
             border: 0;
-            background: linear-gradient(135deg, #1b3d5f, #2d5d88);
+            background: var(--primary, #315e50);
             color: #fff;
             border-radius: 999px;
-            padding: 0.55rem 0.9rem;
+            padding: 0.5rem 0.8rem;
             min-width: 2.8rem;
             cursor: pointer;
-            font: 600 0.9rem/1 "Cairo", sans-serif;
-            transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
-            box-shadow: 0 6px 12px rgba(27, 61, 95, 0.16);
+            font: 600 0.85rem/1 "Cairo", sans-serif;
+            transition: transform 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+            box-shadow: 0 6px 12px rgba(49, 94, 80, 0.16);
         }
         .reader-controls button:hover {
+            background: var(--primary-dark, #24493e);
             transform: translateY(-1px);
-            box-shadow: 0 8px 16px rgba(27, 61, 95, 0.18);
         }
         .reader-controls button:active {
             transform: translateY(0);
@@ -82,14 +82,15 @@
             box-shadow: none;
         }
         #pageIndicator {
-            min-width: 7.5rem;
+            min-width: 7.2rem;
             text-align: center;
-            font-size: 0.9rem;
-            color: #1b3d5f;
+            font-size: 0.82rem;
+            color: var(--primary, #315e50);
             font-weight: 700;
-            padding: 0.4rem 0.7rem;
-            background: rgba(255, 255, 255, 0.68);
+            padding: 0.42rem 0.7rem;
+            background: rgba(255, 255, 255, 0.8);
             border-radius: 999px;
+            border: 1px solid rgba(49, 94, 80, 0.08);
         }
         .reader-frame-wrap {
             overflow: hidden;
