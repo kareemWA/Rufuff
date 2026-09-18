@@ -78,9 +78,10 @@ body.dark-mode .welcome { background: linear-gradient(120deg, #29453a, #3d3b2f);
 .book-pdf-tag.inline { margin-inline-start: auto; }
 .one_videos h3 { min-height: 32px; margin: 6px 0 3px; font-size: 13px; line-height: 1.35; }
 .one_videos p { min-height: 24px; margin: 0; color: var(--muted); font-size: 11px; }
-.book-meta-row { display: flex; align-items: center; justify-content: flex-end; margin-top: 8px; }
-.book-price-group { display: flex; align-items: center; justify-content: flex-start; gap: 8px; margin-inline-start: auto; }
-.book-pages { display: inline-block; color: var(--muted); font-size: 10px; }
+.book-meta-row { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; gap: 8px; }
+.book-price-group { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-inline-start: auto; }
+.book-pages { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 10px; opacity: .9; }
+.book-pages::before { content: "📄"; color: inherit; filter: grayscale(1); }
 .price-box, .detail-price-box { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
 .price-box del, .detail-price-box del { color: var(--muted); font-size: 11px; }
 .discount-badge { display: inline-block; border-radius: 5px; padding: 3px 6px; background: rgba(200, 135, 75, .14); color: var(--accent); font-size: 10px; font-weight: 700; }
