@@ -300,14 +300,15 @@ function createBookCard(book, index = 0) {
             <h3>${book.title}</h3>
             <p>${book.author}</p>
             <div class="book-meta-row">
-                ${book.pageCount ? `<span class="book-pages" aria-label="عدد صفحات الكتاب">${book.pageCount}</span>` : ""}
+
                 <div class="book-price-group">
                     <div class="price-box"><strong class="price">${book.price} جنيه</strong><del>${book.originalPrice || book.price} جنيه</del><span class="discount-badge">خصم ${book.discountPercent || 0}%</span></div>
                 </div>
+                            ${book.pageCount ? `<span class="book-pages" aria-label="عدد صفحات الكتاب">${book.pageCount}</span>` : ""}
             </div>
             <div class="book-actions-row">
                 <a class="book-details-link" href="book-detail.html?id=${book._id}">التفاصيل</a>
-                ${(book.hasPdf ?? Boolean(book.pdfFile)) ? '<span class="book-pdf-tag inline">كتاب PDF</span>' : ""}
+
             </div>
             <div class="book-footer">
                 ${Number(book.price) <= 0 && (book.hasPdf ?? Boolean(book.pdfFile))
