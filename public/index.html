@@ -77,6 +77,49 @@
     </main>
 
     <button class="cart-button" id="cartButton" type="button"><span class="cart-count" id="cartCount">0</span> سلة الكتب</button>
+
+    <div id="authModal" class="auth-modal hidden" aria-hidden="true">
+        <div class="auth-modal-backdrop" data-close-auth-modal="true"></div>
+        <div class="auth-modal-panel" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+            <button type="button" class="auth-modal-close" aria-label="إغلاق النافذة">×</button>
+            <h3 id="authModalTitle">تسجيل الدخول</h3>
+            <div class="auth-tabs" role="tablist" aria-label="خيارات الحساب">
+                <button type="button" class="auth-tab is-active" data-auth-mode="login" role="tab" aria-selected="true">تسجيل الدخول</button>
+                <button type="button" class="auth-tab" data-auth-mode="signup" role="tab" aria-selected="false">إنشاء حساب</button>
+            </div>
+
+            <form id="authLoginForm" class="auth-form is-active" data-auth-form="login">
+                <label>
+                    <span>رقم الهاتف</span>
+                    <input id="authLoginPhone" type="tel" inputmode="numeric" maxlength="11" placeholder="رقم الهاتف (11 رقمًا)" required>
+                </label>
+                <label>
+                    <span>كلمة المرور</span>
+                    <input id="authLoginPassword" type="password" placeholder="كلمة المرور" required>
+                </label>
+                <button type="submit" class="btn auth-submit-btn">تسجيل الدخول</button>
+            </form>
+
+            <form id="authSignupForm" class="auth-form" data-auth-form="signup">
+                <label>
+                    <span>اسم المستخدم</span>
+                    <input id="authSignupName" type="text" placeholder="اسم المستخدم" required>
+                </label>
+                <label>
+                    <span>رقم الهاتف</span>
+                    <input id="authSignupPhone" type="tel" inputmode="numeric" maxlength="11" placeholder="رقم الهاتف (11 رقمًا)" required>
+                </label>
+                <label>
+                    <span>كلمة المرور</span>
+                    <input id="authSignupPassword" type="password" placeholder="كلمة المرور" required>
+                </label>
+                <button type="submit" class="btn auth-submit-btn">إنشاء الحساب</button>
+            </form>
+
+            <p id="authFormMessage" class="auth-form-message" role="status" aria-live="polite"></p>
+        </div>
+    </div>
+
     <footer class="site-footer">
         <p>برمجة وتطوير <strong>كريم جيره</strong></p>
         <div><a href="tel:01016355675">01016355675</a><a href="mailto:kareemgera1@gmail.com">kareemgera1@gmail.com</a></div>

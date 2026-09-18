@@ -14,6 +14,12 @@ const photo = document.getElementById("photo");
 
 const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
 const signupPage = "signin.html";
+const authModal = document.getElementById("authModal");
+const authTabs = Array.from(document.querySelectorAll(".auth-tab"));
+const authForms = Array.from(document.querySelectorAll(".auth-form"));
+const authFormMessage = document.getElementById("authFormMessage");
+const authLoginForm = document.getElementById("authLoginForm");
+const authSignupForm = document.getElementById("authSignupForm");
 let selectedCategory = "all";
 let cart = [];
 let favorites = [];
@@ -66,12 +72,48 @@ function sortBooksNewestFirst(items) {
     });
 }
 
+function setAuthModalMode(mode) {
+    if (!authModal) return;
+
+    authTabs.forEach(tab => {
+        const isActive = tab.dataset.authMode === mode;
+        tab.classList.toggle("is-active", isActive);
+        tab.setAttribute("aria-selected", String(isActive));
+    });
+
+    authForms.forEach(form => {
+        const isActive = form.dataset.authForm === mode;
+        form.classList.toggle("is-active", isActive);
+    });
+
+    const title = document.getElementById("authModalTitle");
+    if (title) {
+        title.textContent = mode === "signup" ? "إنشاء حساب" : "تسجيل الدخول";
+    }
+}
+
+function showAuthModal(mode = "login") {
+    if (!authModal) return;
+    setAuthModalMode(mode);
+    authModal.classList.remove("hidden");
+    authModal.setAttribute("aria-hidden", "false");
+    if (authFormMessage) {
+        authFormMessage.textContent = "";
+        authFormMessage.className = "auth-form-message";
+    }
+}
+
+function hideAuthModal() {
+    if (!authModal) return;
+    authModal.classList.add("hidden");
+    authModal.setAttribute("aria-hidden", "true");
+}
+
 function redirectGuest(event) {
     if (currentUser?.email) return false;
     event.preventDefault();
     event.stopPropagation();
-    const returnUrl = `${window.location.pathname}${window.location.search}`;
-    window.location.href = `${signupPage}?return=${encodeURIComponent(returnUrl)}`;
+    showAuthModal("login");
     return true;
 }
 
@@ -103,11 +145,120 @@ if (currentUser && nameElement) {
 
 if (logout) {
     logout.textContent = currentUser ? "تسجيل خروج" : "تسجيل الدخول";
-    logout.href = currentUser ? "#" : "signin.html";
+    logout.href = "#";
     logout.addEventListener("click", event => {
-        if (!currentUser) return;
+        if (!currentUser) {
+            event.preventDefault();
+            showAuthModal("login");
+            return;
+        }
         event.preventDefault();
         logoutUser();
+    });
+}
+
+if (authModal) {
+    authTabs.forEach(tab => {
+        tab.addEventListener("click", () => setAuthModalMode(tab.dataset.authMode));
+    });
+
+    authModal.addEventListener("click", event => {
+        if (event.target.closest("[data-close-auth-modal='true']") || event.target === authModal) {
+            hideAuthModal();
+        }
+    });
+
+    document.addEventListener("keydown", event => {
+        if (event.key === "Escape" && !authModal.classList.contains("hidden")) {
+            hideAuthModal();
+        }
+    });
+
+    const closeButton = authModal.querySelector(".auth-modal-close");
+    if (closeButton) {
+        closeButton.addEventListener("click", hideAuthModal);
+    }
+
+    authLoginForm?.addEventListener("submit", async event => {
+        event.preventDefault();
+        const phone = document.getElementById("authLoginPhone")?.value.replace(/\D/g, "") || "";
+        const pass = document.getElementById("authLoginPassword")?.value || "";
+        if (!/^\d{11}$/.test(phone) || !pass.trim()) {
+            if (authFormMessage) {
+                authFormMessage.textContent = "اكتب رقم هاتف صحيحًا من 11 رقمًا وكلمة المرور.";
+                authFormMessage.className = "auth-form-message error";
+            }
+            return;
+        }
+
+        if (authFormMessage) {
+            authFormMessage.textContent = "جارٍ تسجيل الدخول...";
+            authFormMessage.className = "auth-form-message";
+        }
+
+        try {
+            const response = await fetch("/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ phone, pass })
+            });
+
+            if (!response.ok) {
+                throw new Error(await response.text());
+            }
+
+            const user = await response.json();
+            localStorage.setItem("currentUser", JSON.stringify(user));
+            hideAuthModal();
+            window.location.reload();
+        } catch (error) {
+            if (authFormMessage) {
+                authFormMessage.textContent = error.message || "تعذر تسجيل الدخول.";
+                authFormMessage.className = "auth-form-message error";
+            }
+        }
+    });
+
+    authSignupForm?.addEventListener("submit", async event => {
+        event.preventDefault();
+        const name = document.getElementById("authSignupName")?.value.trim() || "";
+        const phone = document.getElementById("authSignupPhone")?.value.replace(/\D/g, "") || "";
+        const pass = document.getElementById("authSignupPassword")?.value || "";
+
+        if (!name || !/^\d{11}$/.test(phone) || !pass.trim()) {
+            if (authFormMessage) {
+                authFormMessage.textContent = "اكتب الاسم ورقم هاتف صحيحًا من 11 رقمًا وكلمة المرور.";
+                authFormMessage.className = "auth-form-message error";
+            }
+            return;
+        }
+
+        if (authFormMessage) {
+            authFormMessage.textContent = "جارٍ إنشاء الحساب...";
+            authFormMessage.className = "auth-form-message";
+        }
+
+        try {
+            const response = await fetch("/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, phone, pass })
+            });
+
+            const data = response.ok ? await response.json() : await response.text();
+            if (!response.ok) {
+                throw new Error(data);
+            }
+
+            localStorage.setItem("currentUser", JSON.stringify(data));
+            hideAuthModal();
+            window.location.reload();
+        } catch (error) {
+            if (authFormMessage) {
+                authFormMessage.textContent = error.message || "تعذر إنشاء الحساب.";
+                authFormMessage.className = "auth-form-message error";
+            }
+        }
     });
 }
 
