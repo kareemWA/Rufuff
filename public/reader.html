@@ -35,7 +35,7 @@
             <button type="button" id="zoomInBtn" aria-label="تكبير">+</button>
         </div>
         <div id="readerFrameWrap" class="reader-frame-wrap" hidden>
-            <canvas id="pdfCanvas" aria-label="مستند PDF"></canvas>
+            <iframe id="readerFrame" title="عرض الملف PDF" allow="fullscreen" loading="lazy"></iframe>
         </div>
     </main>
     <footer class="site-footer">
@@ -64,19 +64,20 @@
             background: #102c46;
         }
         .reader-frame-wrap {
-            overflow: auto;
+            overflow: hidden;
             background: #f4f1ec;
             border: 1px solid rgba(27, 61, 95, 0.12);
             border-radius: 18px;
-            padding: 1rem;
-            min-height: 60vh;
+            padding: 0.5rem;
+            min-height: 70vh;
         }
-        #pdfCanvas {
+        #readerFrame {
             display: block;
-            margin: 0 auto;
-            max-width: 100%;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+            width: 100%;
+            min-height: 70vh;
+            border: 0;
             background: #fff;
+            border-radius: 12px;
         }
     </style>
     <script src="assets/js/reader.js?v=5"></script>

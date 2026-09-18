@@ -9,7 +9,7 @@ const prevPageBtn = document.getElementById("prevPageBtn");
 const nextPageBtn = document.getElementById("nextPageBtn");
 const zoomOutBtn = document.getElementById("zoomOutBtn");
 const zoomInBtn = document.getElementById("zoomInBtn");
-const pdfCanvas = document.getElementById("pdfCanvas");
+const readerFrame = document.getElementById("readerFrame");
 const bookId = new URLSearchParams(window.location.search).get("id");
 const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
 
@@ -18,104 +18,10 @@ if (!currentUser?.email) {
     window.location.href = `signin.html?return=${encodeURIComponent(returnUrl)}`;
 }
 
-let pdfDoc = null;
-let pageNum = 1;
-let pageRendering = false;
-let pageNumPending = null;
-let currentScale = 1.2;
-
-async function ensurePdfJs() {
-    const moduleUrl = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.min.mjs";
-    const workerUrl = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.worker.min.mjs";
-    const cMapUrl = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/cmaps/";
-
-    try {
-        const pdfjsLib = await import(moduleUrl);
-        pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
-        pdfjsLib.GlobalWorkerOptions.cMapUrl = cMapUrl;
-        pdfjsLib.GlobalWorkerOptions.cMapPacked = true;
-        return pdfjsLib;
-    } catch (error) {
-        throw new Error("تعذر تحميل مكتبة PDF.js من CDN.");
-    }
-}
-
 function showError(message) {
     readerStatus.textContent = message;
     readerStatus.className = "detail-status error";
 }
-
-function updatePageCounter() {
-    if (!pdfDoc) return;
-    pageIndicator.textContent = `الصفحة ${pageNum} من ${pdfDoc.numPages}`;
-    prevPageBtn.disabled = pageNum <= 1;
-    nextPageBtn.disabled = pageNum >= pdfDoc.numPages;
-}
-
-function renderPage(num) {
-    if (!pdfDoc || !pdfCanvas) return;
-
-    pageRendering = true;
-    pdfDoc.getPage(num).then(page => {
-        const viewport = page.getViewport({ scale: currentScale });
-        const context = pdfCanvas.getContext("2d");
-        pdfCanvas.height = viewport.height;
-        pdfCanvas.width = viewport.width;
-
-        const renderContext = {
-            canvasContext: context,
-            viewport
-        };
-
-        const renderTask = page.render(renderContext);
-        renderTask.promise.then(() => {
-            pageRendering = false;
-            updatePageCounter();
-            if (pageNumPending !== null) {
-                const queuedPage = pageNumPending;
-                pageNumPending = null;
-                renderPage(queuedPage);
-            }
-        }).catch(() => {
-            pageRendering = false;
-            showError("تعذر عرض الصفحة الحالية من الملف.");
-        });
-    }).catch(() => {
-        pageRendering = false;
-        showError("تعذر عرض الملف في المتصفح.");
-    });
-}
-
-function queueRenderPage(num) {
-    if (pageRendering) {
-        pageNumPending = num;
-        return;
-    }
-    pageNum = num;
-    renderPage(num);
-}
-
-prevPageBtn.addEventListener("click", () => {
-    if (pageNum <= 1) return;
-    queueRenderPage(pageNum - 1);
-});
-
-nextPageBtn.addEventListener("click", () => {
-    if (!pdfDoc || pageNum >= pdfDoc.numPages) return;
-    queueRenderPage(pageNum + 1);
-});
-
-zoomOutBtn.addEventListener("click", () => {
-    if (currentScale <= 0.7) return;
-    currentScale = Math.max(0.7, Number((currentScale - 0.25).toFixed(2)));
-    queueRenderPage(pageNum);
-});
-
-zoomInBtn.addEventListener("click", () => {
-    if (currentScale >= 2.5) return;
-    currentScale = Math.min(2.5, Number((currentScale + 0.25).toFixed(2)));
-    queueRenderPage(pageNum);
-});
 
 async function loadReader() {
     if (!bookId) {
@@ -140,29 +46,23 @@ async function loadReader() {
         if (!readResponse.ok) throw new Error(await readResponse.text());
 
         const accessUrl = `/api/books/${encodeURIComponent(bookId)}/access`;
+        const pdfViewerUrl = `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(`${window.location.origin}${accessUrl}`)}`;
+
         readerDownload.href = `${accessUrl}?download=1`;
         readerDownload.hidden = false;
-
-        const pdfResponse = await fetch(accessUrl, { headers: { Accept: "application/pdf" } });
-        if (!pdfResponse.ok) throw new Error("تعذر تحميل ملف PDF.");
-
-        const pdfjsLib = await ensurePdfJs();
-        const pdfBytes = await pdfResponse.arrayBuffer();
-        const loadingTask = pdfjsLib.getDocument({
-            data: new Uint8Array(pdfBytes),
-            cMapUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/cmaps/",
-            cMapPacked: true
-        });
-        pdfDoc = await loadingTask.promise;
-
+        readerFrame.src = pdfViewerUrl;
         readerFrameWrap.hidden = false;
-        readerControls.hidden = false;
+        readerControls.hidden = true;
         readerStatus.hidden = true;
-        updatePageCounter();
-        renderPage(pageNum);
+        pageIndicator.textContent = "عرض عبر Google Viewer";
     } catch (error) {
         showError(error.message || "تعذر فتح الكتاب.");
     }
 }
+
+if (prevPageBtn) prevPageBtn.addEventListener("click", () => readerFrame.contentWindow?.history?.back?.());
+if (nextPageBtn) nextPageBtn.addEventListener("click", () => readerFrame.contentWindow?.history?.forward?.());
+if (zoomOutBtn) zoomOutBtn.addEventListener("click", () => { if (readerFrame) readerFrame.style.transform = "scale(0.9)"; });
+if (zoomInBtn) zoomInBtn.addEventListener("click", () => { if (readerFrame) readerFrame.style.transform = "scale(1.1)"; });
 
 loadReader();
