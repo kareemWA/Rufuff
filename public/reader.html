@@ -47,21 +47,49 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.75rem;
+            gap: 0.6rem;
             flex-wrap: wrap;
-            margin: 1rem 0 1.5rem;
+            margin: 1rem auto 1.5rem;
+            padding: 0.7rem 0.8rem;
+            background: rgba(27, 61, 95, 0.05);
+            border: 1px solid rgba(27, 61, 95, 0.12);
+            border-radius: 16px;
+            max-width: 480px;
+            box-shadow: 0 6px 16px rgba(27, 61, 95, 0.08);
         }
         .reader-controls button {
             border: 0;
-            background: #1b3d5f;
+            background: linear-gradient(135deg, #1b3d5f, #2d5d88);
             color: #fff;
             border-radius: 999px;
-            padding: 0.55rem 1rem;
+            padding: 0.55rem 0.9rem;
+            min-width: 2.8rem;
             cursor: pointer;
-            font: inherit;
+            font: 600 0.9rem/1 "Cairo", sans-serif;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+            box-shadow: 0 6px 12px rgba(27, 61, 95, 0.16);
         }
         .reader-controls button:hover {
-            background: #102c46;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 16px rgba(27, 61, 95, 0.18);
+        }
+        .reader-controls button:active {
+            transform: translateY(0);
+        }
+        .reader-controls button:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        #pageIndicator {
+            min-width: 7.5rem;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #1b3d5f;
+            font-weight: 700;
+            padding: 0.4rem 0.7rem;
+            background: rgba(255, 255, 255, 0.68);
+            border-radius: 999px;
         }
         .reader-frame-wrap {
             overflow: hidden;
@@ -78,6 +106,38 @@
             border: 0;
             background: #fff;
             border-radius: 12px;
+        }
+
+        @media (max-width: 576px) {
+            .reader-main {
+                padding-inline: 0.75rem;
+            }
+            .reader-heading {
+                gap: 0.75rem;
+                align-items: flex-start;
+            }
+            .reader-controls {
+                gap: 0.45rem;
+                padding: 0.55rem 0.65rem;
+                max-width: 100%;
+            }
+            .reader-controls button {
+                padding: 0.45rem 0.7rem;
+                min-width: 2.4rem;
+                font-size: 0.8rem;
+            }
+            #pageIndicator {
+                min-width: 6.5rem;
+                font-size: 0.78rem;
+                padding: 0.35rem 0.55rem;
+            }
+            .reader-frame-wrap {
+                min-height: 58vh;
+                padding: 0.35rem;
+            }
+            #readerFrame {
+                min-height: 58vh;
+            }
         }
     </style>
     <script src="assets/js/reader.js?v=5"></script>
