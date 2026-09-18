@@ -35,7 +35,7 @@
             <button type="button" id="zoomInBtn" aria-label="تكبير">+</button>
         </div>
         <div id="readerFrameWrap" class="reader-frame-wrap" hidden>
-            <div id="readerFrame" title="عرض الملف PDF" aria-label="عرض الملف PDF"></div>
+            <iframe id="readerFrame" title="عرض الملف PDF" allow="fullscreen" loading="lazy"></iframe>
         </div>
     </main>
     <footer class="site-footer">
@@ -141,7 +141,6 @@
             }
         }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfobject/2.2.8/pdfobject.min.js"></script>
-    <script src="assets/js/reader.js?v=6"></script>
+    <script src="assets/js/reader.js?v=7"></script>
 </body>
 </html>

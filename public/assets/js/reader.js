@@ -64,13 +64,7 @@ async function loadReader() {
 
         readerDownload.href = `${accessUrl}?download=1`;
         readerDownload.hidden = false;
-
-        readerFrame.innerHTML = "";
-        const pdfEmbedded = window.PDFObject && PDFObject.embed(viewerUrl, "#readerFrame");
-        if (!pdfEmbedded) {
-            readerFrame.innerHTML = `<embed src="${viewerUrl}" type="application/pdf" style="width:100%;height:70vh;border:0;" />`;
-        }
-
+        readerFrame.src = viewerUrl;
         readerFrameWrap.hidden = false;
         readerControls.hidden = true;
         readerStatus.hidden = true;
