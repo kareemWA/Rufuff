@@ -13,6 +13,20 @@ const readerFrame = document.getElementById("readerFrame");
 const bookId = new URLSearchParams(window.location.search).get("id");
 const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
 
+function normalizeGoogleDrivePdfUrl(url) {
+    if (!url || typeof url !== "string") return url;
+    try {
+        const parsed = new URL(url);
+        const fileId = parsed.searchParams.get("id") || parsed.pathname.match(/\/file\/d\/([^/]+)/i)?.[1];
+        if ((parsed.hostname === "drive.google.com" || parsed.hostname === "docs.google.com") && fileId) {
+            return `https://drive.google.com/uc?export=view&id=${encodeURIComponent(fileId)}`;
+        }
+    } catch {
+        // Ignore invalid URLs and keep the original value.
+    }
+    return url;
+}
+
 if (!currentUser?.email) {
     const returnUrl = `${window.location.pathname}${window.location.search}`;
     window.location.href = `signin.html?return=${encodeURIComponent(returnUrl)}`;
@@ -46,7 +60,7 @@ async function loadReader() {
         if (!readResponse.ok) throw new Error(await readResponse.text());
 
         const accessUrl = `/api/books/${encodeURIComponent(bookId)}/access`;
-        const viewerUrl = /^https?:\/\//i.test(String(book.pdfFile || "")) ? book.pdfFile : accessUrl;
+        const viewerUrl = /^https?:\/\//i.test(String(book.pdfFile || "")) ? normalizeGoogleDrivePdfUrl(book.pdfFile) : accessUrl;
 
         readerDownload.href = `${accessUrl}?download=1`;
         readerDownload.hidden = false;

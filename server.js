@@ -140,6 +140,20 @@ const couponSchema = new mongoose.Schema({
 
 const Coupon = mongoose.model("Coupon", couponSchema);
 
+function normalizeGoogleDrivePdfUrl(fileUrl) {
+    if (!fileUrl || typeof fileUrl !== "string") return fileUrl;
+    try {
+        const parsed = new URL(fileUrl);
+        const fileId = parsed.searchParams.get("id") || parsed.pathname.match(/\/file\/d\/([^/]+)/i)?.[1];
+        if ((parsed.hostname === "drive.google.com" || parsed.hostname === "docs.google.com") && fileId) {
+            return `https://drive.google.com/uc?export=download&id=${encodeURIComponent(fileId)}`;
+        }
+    } catch {
+        // Ignore invalid URLs and keep the original value.
+    }
+    return fileUrl;
+}
+
 function applyBookDiscount(book) {
     const originalPrice = Number(book.originalPrice || book.price);
     const discountPercent = Math.min(90, Math.max(0, Number(book.discountPercent ?? 0)));
@@ -1220,7 +1234,8 @@ app.get("/api/books/:bookId/access", downloadLimiter, async (req, res) => {
         }
         if (!/^https:\/\//i.test(book.pdfFile)) return res.status(410).send("ملف الكتاب يجب أن يكون على تخزين خارجي آمن");
 
-        const pdfResponse = await fetch(book.pdfFile);
+        const directPdfUrl = normalizeGoogleDrivePdfUrl(book.pdfFile);
+        const pdfResponse = await fetch(directPdfUrl, { redirect: "follow" });
         if (!pdfResponse.ok) return res.status(502).send("تعذر تحميل ملف PDF من التخزين الخارجي");
 
         const pdfBuffer = Buffer.from(await pdfResponse.arrayBuffer());
