@@ -286,6 +286,7 @@ function createBookCard(book, index = 0) {
     article.className = "one_videos";
     article.dataset.category = book.category;
     article.dataset.title = book.title;
+    article.dataset.bookId = String(book._id || "");
 
     article.innerHTML = `
         <div class="book-cover-wrap">
@@ -411,7 +412,7 @@ async function refreshPurchasedBooks(visibleBooks) {
 
     visibleBooks.forEach(book => {
         const card = [...booksContainer.querySelectorAll(".one_videos")]
-            .find(element => element.dataset.title === book.title);
+            .find(element => String(element.dataset.bookId || "") === String(book._id || ""));
         if (!card) return;
 
         const localRecord = localRecords[String(book._id)];
