@@ -32,7 +32,7 @@ const adminUpload = multer({
     limits: { files: 2, fileSize: 50 * 1024 * 1024 },
     fileFilter: (req, file, callback) => {
         const validCover = file.fieldname === "coverFile" && /^image\/(png|jpe?g|webp|avif)$/i.test(file.mimetype);
-        const validPdf = file.fieldname === "fileUpload" && file.mimetype === "application/pdf";
+        const validPdf = file.fieldname === "fileUpload" && /pdf|octet-stream|x-pdf/i.test(file.mimetype);
         callback(null, validCover || validPdf);
     }
 });
@@ -589,9 +589,12 @@ async function uploadToObjectStorage(file, folder) {
     if (missingStorageSettings.length) {
         throw new Error(`إعدادات Supabase Storage ناقصة: ${missingStorageSettings.join(", ")}`);
     }
-    const extension = file.mimetype === "application/pdf"
+    const safeMimeType = /pdf/i.test(file.mimetype) || /x-pdf|octet-stream/i.test(file.mimetype)
+        ? "application/pdf"
+        : file.mimetype;
+    const extension = /pdf/i.test(safeMimeType)
         ? "pdf"
-        : file.mimetype.split("/")[1].replace("jpeg", "jpg");
+        : safeMimeType.split("/")[1]?.replace("jpeg", "jpg") || "bin";
     const key = `${folder}/${Date.now()}-${crypto.randomUUID()}.${extension}`;
     const uploadUrl = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(SUPABASE_STORAGE_BUCKET)}/${key.split("/").map(encodeURIComponent).join("/")}`;
     const response = await fetch(uploadUrl, {
@@ -599,7 +602,7 @@ async function uploadToObjectStorage(file, folder) {
         headers: {
             Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
             apikey: SUPABASE_SERVICE_ROLE_KEY,
-            "Content-Type": file.mimetype,
+            "Content-Type": safeMimeType,
             "Cache-Control": "public, max-age=31536000, immutable",
             "x-upsert": "false"
         },
@@ -1222,11 +1225,11 @@ app.get("/api/books/:bookId/access", downloadLimiter, async (req, res) => {
 
         const pdfBuffer = Buffer.from(await pdfResponse.arrayBuffer());
         const filename = `${(book.title || "book").replace(/[^\w\s-]/g, "").trim() || "book"}.pdf`;
-        res.setHeader("Content-Type", pdfResponse.headers.get("content-type") || "application/pdf");
+        const isDownload = req.query.download === "1";
+        res.setHeader("Content-Type", "application/pdf");
         res.setHeader("Content-Length", String(pdfBuffer.length));
-        if (req.query.download === "1") {
-            res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(filename)}"`);
-        }
+        res.setHeader("Content-Disposition", `${isDownload ? "attachment" : "inline"}; filename="${encodeURIComponent(filename)}"`);
+        res.setHeader("Cache-Control", "private, max-age=0, must-revalidate");
         res.send(pdfBuffer);
     } catch (error) {
         res.status(500).send("تعذر فتح الكتاب");

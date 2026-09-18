@@ -46,15 +46,14 @@ async function loadReader() {
         if (!readResponse.ok) throw new Error(await readResponse.text());
 
         const accessUrl = `/api/books/${encodeURIComponent(bookId)}/access`;
-        const pdfViewerUrl = `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(`${window.location.origin}${accessUrl}`)}`;
 
         readerDownload.href = `${accessUrl}?download=1`;
         readerDownload.hidden = false;
-        readerFrame.src = pdfViewerUrl;
+        readerFrame.src = accessUrl;
         readerFrameWrap.hidden = false;
         readerControls.hidden = true;
         readerStatus.hidden = true;
-        pageIndicator.textContent = "عرض عبر Google Viewer";
+        pageIndicator.textContent = "عرض الكتاب";
     } catch (error) {
         showError(error.message || "تعذر فتح الكتاب.");
     }
