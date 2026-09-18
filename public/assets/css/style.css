@@ -76,13 +76,17 @@ body.dark-mode .welcome { background: linear-gradient(120deg, #29453a, #3d3b2f);
 .book-category { color: var(--accent); font-size: 11px; }
 .book-pdf-tag { display: inline-flex; align-items: center; justify-content: center; padding: 4px 8px; border: 1px solid rgba(49, 94, 80, .14); border-radius: 999px; background: rgba(49, 94, 80, .06); color: var(--primary); font-size: 10px; font-weight: 700; }
 .book-pdf-tag.inline { margin-inline-start: auto; }
+@media (max-width: 600px) {
+    .book-pdf-tag { padding: 3px 6px; font-size: 8px; }
+    .book-pdf-tag.inline { margin-inline-start: 0; }
+}
 .one_videos h3 { min-height: 32px; margin: 6px 0 3px; font-size: 13px; line-height: 1.35; }
 .one_videos p { min-height: 24px; margin: 0; color: var(--muted); font-size: 11px; }
 .book-meta-row { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; gap: 8px; }
 .book-price-group { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-inline-start: auto; }
 .book-pages { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 10px; opacity: .9; }
 .book-pages::before { content: "📄"; color: inherit; filter: grayscale(1); }
-.price-box, .detail-price-box { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
+.price-box, .detail-price-box { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
 .price-box del, .detail-price-box del { color: var(--muted); font-size: 11px; }
 .discount-badge { display: inline-block; border-radius: 5px; padding: 3px 6px; background: rgba(200, 135, 75, .14); color: var(--accent); font-size: 10px; font-weight: 700; }
 .favorite-toggle { position: absolute; top: 8px; left: 8px; z-index: 2; display: block; width: 30px; height: 30px; margin: 0; border: 1px solid var(--border); border-radius: 50%; background: rgba(255,255,255,.9); color: var(--muted); font-size: 20px; line-height: 27px; cursor: pointer; backdrop-filter: blur(4px); }
