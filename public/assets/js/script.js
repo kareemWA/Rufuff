@@ -288,20 +288,32 @@ function createBookCard(book, index = 0) {
     article.dataset.title = book.title;
 
     article.innerHTML = `
-        <img class="book-cover" src="${book.image}" alt="غلاف كتاب ${book.title}" loading="${index > 3 ? "lazy" : "eager"}">
+        <div class="book-cover-wrap">
+            <button class="favorite-toggle" type="button" aria-label="إضافة ${book.title} للمفضلة">${favorites.some(item => item._id === book._id) ? "♥" : "♡"}</button>
+            <img class="book-cover" src="${book.image}" alt="غلاف كتاب ${book.title}" loading="${index > 3 ? "lazy" : "eager"}">
+        </div>
         <div class="book-info">
-            <span class="book-category">${book.category}</span>
+            <div class="book-top-bar">
+                <span class="book-category">${book.category}</span>
+                ${(book.hasPdf ?? Boolean(book.pdfFile)) ? '<span class="book-pdf-tag">كتاب PDF</span>' : ""}
+            </div>
             <h3>${book.title}</h3>
             <p>${book.author}</p>
-            ${book.pageCount ? `<span class="book-pages" aria-label="عدد صفحات الكتاب">📄 ${book.pageCount}</span>` : ""}
-            <div class="price-box"><strong class="price">${book.price} جنيه</strong><del>${book.originalPrice || book.price} جنيه</del><span class="discount-badge">خصم ${book.discountPercent || 0}%</span></div>
+            <div class="book-meta-row">
+                <div class="book-price-group">
+                    ${book.pageCount ? `<span class="book-pages" aria-label="عدد صفحات الكتاب">📄 ${book.pageCount}</span>` : ""}
+                    <div class="price-box"><strong class="price">${book.price} جنيه</strong><del>${book.originalPrice || book.price} جنيه</del><span class="discount-badge">خصم ${book.discountPercent || 0}%</span></div>
+                </div>
+            </div>
+            <div class="book-actions-row">
+                <a class="book-details-link" href="book-detail.html?id=${book._id}">التفاصيل</a>
+                ${(book.hasPdf ?? Boolean(book.pdfFile)) ? '<span class="book-pdf-tag inline">كتاب PDF</span>' : ""}
+            </div>
             <div class="book-footer">
                 ${Number(book.price) <= 0 && (book.hasPdf ?? Boolean(book.pdfFile))
                     ? `<a class="btn buy-book" href="reader.html?id=${encodeURIComponent(book._id)}">اقرأ مجانًا</a>`
                     : '<button class="btn buy-book" type="button">أضف للسلة</button>'}
             </div>
-            <button class="favorite-toggle" type="button" aria-label="إضافة ${book.title} للمفضلة">${favorites.some(item => item._id === book._id) ? "♥" : "♡"}</button>
-            <a class="book-details-link" href="book-detail.html?id=${book._id}">التفاصيل</a>
             <p class="book-message" role="status" aria-live="polite"></p>
         </div>`;
 

@@ -69,17 +69,24 @@ body.dark-mode .welcome { background: linear-gradient(120deg, #29453a, #3d3b2f);
 .first_videos { width: min(1120px, calc(100% - 40px)); display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 280px)); justify-content: start; gap: 18px; margin: 0 auto 55px; }
 .one_videos { padding: 10px; border: 1px solid var(--border); border-radius: 15px; background: var(--surface); box-shadow: var(--shadow); transition: transform .25s, box-shadow .25s; }
 .one_videos:hover { transform: translateY(-5px); box-shadow: 0 20px 42px rgba(69, 57, 42, .15); }
+.book-cover-wrap { position: relative; }
 .book-cover { width: 100%; height: 200px; border-radius: 10px; object-fit: cover; }
 .book-info { padding: 6px 4px 2px; }
+.book-top-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
 .book-category { color: var(--accent); font-size: 11px; }
+.book-pdf-tag { display: inline-flex; align-items: center; justify-content: center; padding: 4px 8px; border: 1px solid rgba(49, 94, 80, .14); border-radius: 999px; background: rgba(49, 94, 80, .06); color: var(--primary); font-size: 10px; font-weight: 700; }
+.book-pdf-tag.inline { margin-inline-start: auto; }
 .one_videos h3 { min-height: 32px; margin: 6px 0 3px; font-size: 13px; line-height: 1.35; }
 .one_videos p { min-height: 24px; margin: 0; color: var(--muted); font-size: 11px; }
-.book-pages { display: inline-block; margin-top: 4px; color: var(--muted); font-size: 10px; }
+.book-meta-row { display: flex; align-items: center; justify-content: flex-end; margin-top: 8px; }
+.book-price-group { display: flex; align-items: center; justify-content: flex-start; gap: 8px; margin-inline-start: auto; }
+.book-pages { display: inline-block; color: var(--muted); font-size: 10px; }
 .price-box, .detail-price-box { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
 .price-box del, .detail-price-box del { color: var(--muted); font-size: 11px; }
 .discount-badge { display: inline-block; border-radius: 5px; padding: 3px 6px; background: rgba(200, 135, 75, .14); color: var(--accent); font-size: 10px; font-weight: 700; }
-.favorite-toggle { display: block; width: 30px; height: 30px; margin: 6px 0 0 auto; border: 1px solid var(--border); border-radius: 50%; background: var(--surface); color: var(--muted); font-size: 20px; line-height: 27px; cursor: pointer; }
+.favorite-toggle { position: absolute; top: 8px; left: 8px; z-index: 2; display: block; width: 30px; height: 30px; margin: 0; border: 1px solid var(--border); border-radius: 50%; background: rgba(255,255,255,.9); color: var(--muted); font-size: 20px; line-height: 27px; cursor: pointer; backdrop-filter: blur(4px); }
 .favorite-toggle.is-favorite { border-color: rgba(200, 135, 75, .4); background: rgba(200, 135, 75, .12); color: var(--accent); }
+.book-actions-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
 .book-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
 .price { color: var(--primary); font-weight: 700; }
 .btn { display: inline-block; border: 0; border-radius: 9px; padding: 10px 14px; background: var(--primary); color: #fff; text-decoration: none; font: inherit; font-size: 12px; cursor: pointer; }
@@ -90,6 +97,8 @@ body.dark-mode .welcome { background: linear-gradient(120deg, #29453a, #3d3b2f);
 .book-message .read-book-link { display: inline-block; padding: 7px 10px; color: #fff; font-size: 11px; vertical-align: middle; }
 .book-message.success { color: var(--primary); }
 .book-message.error { color: #b34f4f; }
+.book-details-link { display: inline-block; margin-top: 0; color: var(--primary); font-size: 12px; font-weight: 700; text-decoration: none; }
+.book-details-link:hover { color: var(--accent); }
 .cart-button { position: fixed; right: 22px; bottom: 22px; z-index: 30; border: 0; border-radius: 50px; padding: 13px 18px; background: var(--accent); color: #fff; font: inherit; font-size: 12px; box-shadow: 0 10px 25px rgba(200, 135, 75, .28); cursor: pointer; }
 .cart-count { display: inline-grid; place-items: center; min-width: 20px; height: 20px; margin-right: 4px; border-radius: 50%; background: #fff; color: var(--accent); font-size: 11px; }
 
@@ -388,6 +397,8 @@ body.dark-mode .auth-form input {
     .book-category { font-size: 10px; }
     .one_videos h3 { min-height: 24px; margin: 4px 0 2px; font-size: 12px; line-height: 1.3; }
     .one_videos p { min-height: 0; font-size: 10px; }
+    .book-meta-row { margin-top: 6px; }
+    .book-price-group { gap: 6px; }
     .book-footer { display: block; margin-top: 7px; }
     .price { display: block; margin-bottom: 5px; font-size: 12px; }
     .price-box { gap: 4px; }
@@ -395,8 +406,9 @@ body.dark-mode .auth-form input {
     .price-box del { font-size: 9px; }
     .discount-badge { padding: 2px 4px; font-size: 9px; }
     .one_videos .btn { width: 100%; padding: 8px 5px; font-size: 10px; }
-    .favorite-toggle { width: 27px; height: 27px; margin-top: 6px; font-size: 18px; line-height: 24px; }
-    .book-details-link { margin-top: 8px; font-size: 10px; }
+    .favorite-toggle { width: 27px; height: 27px; top: 6px; left: 6px; font-size: 18px; line-height: 24px; }
+    .book-actions-row { gap: 6px; }
+    .book-details-link { font-size: 10px; }
     .book-message { font-size: 10px; }
     .cart-button { right: 10px; bottom: 10px; padding: 8px 11px; font-size: 10px; }
     .cart-count { min-width: 17px; height: 17px; font-size: 9px; }
