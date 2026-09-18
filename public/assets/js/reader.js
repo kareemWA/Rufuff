@@ -46,10 +46,11 @@ async function loadReader() {
         if (!readResponse.ok) throw new Error(await readResponse.text());
 
         const accessUrl = `/api/books/${encodeURIComponent(bookId)}/access`;
+        const viewerUrl = /^https?:\/\//i.test(String(book.pdfFile || "")) ? book.pdfFile : accessUrl;
 
         readerDownload.href = `${accessUrl}?download=1`;
         readerDownload.hidden = false;
-        readerFrame.src = accessUrl;
+        readerFrame.src = viewerUrl;
         readerFrameWrap.hidden = false;
         readerControls.hidden = true;
         readerStatus.hidden = true;
