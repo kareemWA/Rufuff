@@ -665,19 +665,10 @@ app.delete("/api/admin/categories/:categoryId", requireAdmin, async (req, res) =
 
 app.delete("/api/admin/books/:bookId", requireAdmin, async (req, res) => {
     try {
-        const rawBookId = String(req.params.bookId || "").trim();
-        if (!mongoose.Types.ObjectId.isValid(rawBookId)) {
-            return res.status(400).send("معرّف الكتاب غير صالح");
-        }
-
-        const bookId = new mongoose.Types.ObjectId(rawBookId);
+        const bookId = new mongoose.Types.ObjectId(req.params.bookId);
         const book = await Book.findOne({ _id: bookId }).select("image pdfFile").lean();
         if (!book) return res.status(404).send("الكتاب غير موجود أو محذوف بالفعل");
-
-        await Promise.allSettled([
-            deleteFromObjectStorage(book.image),
-            deleteFromObjectStorage(book.pdfFile)
-        ]);
+        await Promise.all([deleteFromObjectStorage(book.image), deleteFromObjectStorage(book.pdfFile)]);
 
         const deletedBook = await Book.findOneAndDelete({ _id: bookId });
         if (!deletedBook) return res.status(404).send("الكتاب غير موجود أو محذوف بالفعل");
@@ -696,8 +687,7 @@ app.delete("/api/admin/books/:bookId", requireAdmin, async (req, res) => {
 
         res.status(204).end();
     } catch (error) {
-        console.error("Delete book error:", error);
-        res.status(500).send("تعذر حذف الكتاب");
+        res.status(400).send("معرّف الكتاب غير صالح أو تعذر حذفه");
     }
 });
 
