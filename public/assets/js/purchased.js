@@ -19,7 +19,7 @@ function renderBook(book, purchase) {
     article.innerHTML = `
         <img class="purchased-cover" src="${book.image}" alt="غلاف كتاب ${book.title}" loading="lazy" decoding="async">
         <div class="purchased-card-info">
-            <span class="book-category">${book.category}</span>
+            <span class="book-category">كتب</span>
             <h2>${book.title}</h2>
             <p>${book.author}</p>
             ${(book.hasPdf ?? Boolean(book.pdfFile))

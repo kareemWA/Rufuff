@@ -81,7 +81,7 @@ function renderCart() {
         item.innerHTML = `
             <img src="${book.image}" alt="غلاف كتاب ${book.title}" loading="lazy" decoding="async">
             <div class="cart-item-info">
-                <span class="book-category">${book.category}</span>
+                <span class="book-category">كتب</span>
                 <h2>${book.title}</h2>
                 <p>${book.author}</p>
                 <div class="price-box"><strong class="price">${book.price} جنيه</strong><del>${book.originalPrice || book.price} جنيه</del><span class="discount-badge">خصم ${book.discountPercent || 0}%</span></div>

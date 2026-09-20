@@ -78,7 +78,7 @@ function renderBook(data) {
     book = data;
     detailImage.src = data.image;
     detailImage.alt = `غلاف كتاب ${data.title}`;
-    setText(detailCategory, data.category);
+    setText(detailCategory, "كتب");
     setText(detailTitle, data.title);
     setText(detailAuthor, data.author);
     setText(detailDescription, data.description);

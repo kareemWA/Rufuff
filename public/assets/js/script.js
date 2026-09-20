@@ -284,7 +284,7 @@ async function logoutUser() {
 function createBookCard(book, index = 0) {
     const article = document.createElement("article");
     article.className = "one_videos";
-    article.dataset.category = book.category;
+    article.dataset.category = "كتب";
     article.dataset.title = book.title;
     article.dataset.bookId = String(book._id || "");
 
@@ -295,7 +295,7 @@ function createBookCard(book, index = 0) {
         </div>
         <div class="book-info">
             <div class="book-top-bar">
-                <span class="book-category">${book.category}</span>
+                <span class="book-category">كتب</span>
                 ${(book.hasPdf ?? Boolean(book.pdfFile)) ? '<span class="book-pdf-tag">كتاب PDF</span>' : ""}
             </div>
             <h3>${book.title}</h3>
@@ -373,8 +373,8 @@ function createBookCard(book, index = 0) {
 function renderBooks() {
     const searchValue = (searchInput?.value || "").trim().toLowerCase();
     const visibleBooks = books.filter(book => {
-        const matchesCategory = selectedCategory === "all" || book.category === selectedCategory;
-        const matchesSearch = `${book.title} ${book.author} ${book.category}`.toLowerCase().includes(searchValue);
+        const matchesCategory = true;
+        const matchesSearch = `${book.title} ${book.author}`.toLowerCase().includes(searchValue);
         return matchesCategory && matchesSearch;
     });
 
@@ -507,33 +507,18 @@ async function updateCart() {
 
 function renderCategories(categories) {
     if (!categoriesList) return;
-    categoriesList.innerHTML = `<button class="category active" data-category="all">الكل</button>${categories.map(category => `<button class="category" data-category="${escapeHtml(category.name)}">${escapeHtml(category.name)}</button>`).join("")}`;
+    categoriesList.innerHTML = '<button class="category active" data-category="all" type="button">كتب</button>';
     categoryButtons = [...categoriesList.querySelectorAll(".category")];
     categoryButtons.forEach(button => button.addEventListener("click", () => {
         categoryButtons.forEach(item => item.classList.remove("active"));
         button.classList.add("active");
-        selectedCategory = button.dataset.category;
+        selectedCategory = "all";
         renderBooks();
     }));
 }
 
 async function loadCategories() {
-    try {
-        const cachedCategories = JSON.parse(localStorage.getItem(categoriesCacheKey) || "null");
-        if (Array.isArray(cachedCategories) && cachedCategories.length) renderCategories(cachedCategories);
-    } catch {
-        localStorage.removeItem(categoriesCacheKey);
-    }
-
-    try {
-        const response = await fetch("/api/categories");
-        if (!response.ok) throw new Error("تعذر تحميل التصنيفات");
-        const categories = await response.json();
-        safeLocalStorageSet(categoriesCacheKey, categories);
-        renderCategories(categories);
-    } catch (error) {
-        renderCategories([]);
-    }
+    renderCategories([{ name: "كتب" }]);
 }
 
 if (searchInput) {
