@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://rufuff.vercel.app/sitemap.xml
