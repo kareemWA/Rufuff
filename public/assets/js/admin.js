@@ -29,26 +29,19 @@ async function deleteResource(url, label) {
 }
 
 async function loadDashboard() {
-    const [stats, orders, users, books, categories, coupons] = await Promise.all([
+    const [stats, orders, users, books, coupons] = await Promise.all([
         request("/api/admin/stats"),
         request("/api/admin/orders"),
         request("/api/admin/users"),
         request("/api/admin/books"),
-        request("/api/admin/categories"),
         request("/api/admin/coupons")
     ]);
-    const categorySelect = document.querySelector('#bookForm select[name="category"]');
-    if (categorySelect) {
-        categorySelect.innerHTML = '<option value="">اختر التصنيف</option>'
-            + categories.map(category => `<option value="${escapeHtml(category.name)}">${escapeHtml(category.name)}</option>`).join("");
-    }
     document.getElementById("usersCount").textContent = stats.users;
     document.getElementById("booksCount").textContent = stats.books;
     document.getElementById("ordersCount").textContent = stats.orders;
     document.getElementById("revenue").textContent = `${stats.revenue} جنيه`;
     document.getElementById("orders").innerHTML = orders.slice(0, 20).map(order => `<tr><td>${escapeHtml(order.userId?.name || order.userId?.email || "-")}<br><small>${escapeHtml(order.userId?.email || "")}</small></td><td>${order.books.map(book => escapeHtml(book.title)).join("، ")}</td><td>${order.total} جنيه</td><td><code>${escapeHtml(order.kashierTransactionId || order.kashierOrderReference || "بانتظار Kashier")}</code></td><td>${order.paymentStatus === "paid" ? "تم الدفع وفتح الكتب" : order.paymentStatus === "failed" ? `فشل الدفع: ${escapeHtml(order.rejectionReason || "غير مكتمل")}` : "بانتظار تأكيد Kashier"}</td></tr>`).join("");
     document.getElementById("users").innerHTML = users.slice(0, 20).map(user => `<tr><td>${user.name}</td><td>${user.email}</td><td>${user.role}</td></tr>`).join("");
-    document.getElementById("categories").innerHTML = categories.map(category => `<tr><td>${escapeHtml(category.name)}</td><td>${category.bookCount}</td><td>${category.bookCount ? "مرتبط بكتب" : `<button class="delete-resource" data-url="/api/admin/categories/${category.id}" data-label="التصنيف">حذف</button>`}</td></tr>`).join("");
     document.getElementById("coupons").innerHTML = coupons.map(coupon => `<tr><td><strong>${escapeHtml(coupon.code)}</strong></td><td>${coupon.type === "percentage" ? "نسبة مئوية" : "مبلغ ثابت"}</td><td>${coupon.value}${coupon.type === "percentage" ? "%" : " جنيه"}</td><td>${coupon.minPurchase || 0} جنيه</td><td>${coupon.maxUses || "غير محدد"}</td><td><button class="delete-resource" data-url="/api/admin/coupons/${coupon._id}" data-label="الكوبون">حذف</button></td></tr>`).join("");
     document.getElementById("books").innerHTML = books.map(book => `<tr><td>${escapeHtml(book.title)}</td><td>${escapeHtml(book.author)}</td><td>${book.price} جنيه</td><td><button class="delete-resource" data-url="/api/admin/books/${book._id}" data-label="الكتاب">حذف</button></td></tr>`).join("");
 }
@@ -61,6 +54,7 @@ async function submitForm(form, url) {
             if (form.id === "bookForm") {
                 const coverFile = data.coverFile;
                 const pdfFile = data.fileUpload;
+                data.category = "كتب";
                 if (coverFile?.size > 4 * 1024 * 1024) throw new Error("صورة الغلاف يجب ألا تتجاوز 4 ميجابايت");
                 if (pdfFile?.size > 50 * 1024 * 1024) throw new Error("ملف PDF يجب ألا يتجاوز 50 ميجابايت");
                 if (coverFile?.size || pdfFile?.size) {
@@ -89,7 +83,6 @@ async function submitForm(form, url) {
 
 submitForm(document.getElementById("bookForm"), "/api/admin/books");
 submitForm(document.getElementById("couponForm"), "/api/admin/coupons");
-submitForm(document.getElementById("categoryForm"), "/api/admin/categories");
 document.addEventListener("click", event => {
     const button = event.target.closest(".delete-resource");
     if (button) deleteResource(button.dataset.url, button.dataset.label);

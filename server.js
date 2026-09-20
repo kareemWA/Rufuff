@@ -750,15 +750,14 @@ app.delete("/api/admin/series/:seriesId", requireAdmin, async (req, res) => {
 
 app.post("/api/admin/books", requireAdmin, async (req, res) => {
     try {
-        const { title, author, category, price, pageCount, discountPercent, cover, file, description, seriesId } = req.body;
-        const normalizedCategory = String(category || "").trim();
+        const { title, author, price, pageCount, discountPercent, cover, file, description, seriesId } = req.body;
+        const normalizedCategory = "كتب";
         const basePrice = Number(price);
         const normalizedPageCount = pageCount === "" || pageCount == null ? null : Number(pageCount);
         const discount = Math.min(90, Math.max(0, Number(discountPercent || 0)));
         if (!Number.isFinite(basePrice) || basePrice < 0) return res.status(400).send("السعر يجب أن يكون صفرًا أو أكبر");
         if (normalizedPageCount !== null && (!Number.isInteger(normalizedPageCount) || normalizedPageCount < 1 || normalizedPageCount > 100000)) return res.status(400).send("عدد الصفحات يجب أن يكون رقمًا صحيحًا بين 1 و100000");
         if (!Number.isFinite(discount)) return res.status(400).send("نسبة الخصم غير صحيحة");
-        if (!normalizedCategory || !await Category.exists({ name: normalizedCategory })) return res.status(400).send("التصنيف غير موجود");
         if (typeof cover !== "string" || !/^https:\/\/[^\s]+$/i.test(cover.trim())) return res.status(400).send("رابط صورة الغلاف الخارجي عبر HTTPS مطلوب");
         if (file && !/^https:\/\/[^\s]+$/i.test(String(file).trim())) return res.status(400).send("رابط ملف PDF خارجي عبر HTTPS مطلوب");
         const finalPrice = Math.round(basePrice * (100 - discount) / 100 * 100) / 100;
