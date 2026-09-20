@@ -76,15 +76,16 @@ function renderComments(comments, averageRating) {
 
 function renderBook(data) {
     book = data;
+    const isComingSoon = Boolean(data.isComingSoon || data.comingSoon);
     detailImage.src = data.image;
     detailImage.alt = `غلاف كتاب ${data.title}`;
-    setText(detailCategory, "كتب");
+    setText(detailCategory, isComingSoon ? "كتب • قريبًا" : "كتب");
     setText(detailTitle, data.title);
     setText(detailAuthor, data.author);
     setText(detailDescription, data.description);
-    setText(detailPrice, `${data.price} جنيه`);
-    setText(detailOriginalPrice, `${data.originalPrice || data.price} جنيه`);
-    setText(detailDiscount, `خصم ${data.discountPercent || 0}%`);
+    setText(detailPrice, isComingSoon ? "قريبًا" : `${data.price} جنيه`);
+    setText(detailOriginalPrice, isComingSoon ? "--" : `${data.originalPrice || data.price} جنيه`);
+    setText(detailDiscount, isComingSoon ? "قريبًا" : `خصم ${data.discountPercent || 0}%`);
     setText(detailRating, "جاري تحميل التعليقات...");
     setText(detailPageCount, data.pageCount ? `${data.pageCount} صفحة` : "عدد الصفحات غير محدد");
     setText(detailReadCount, `${data.readCount || 0} قراءة`);
@@ -102,6 +103,16 @@ function updateFavoriteButton() {
 
 function updatePurchaseButton() {
     const isFree = Number(book?.price) <= 0 && (book?.hasPdf ?? Boolean(book?.pdfFile));
+    const isComingSoon = Boolean(book?.isComingSoon || book?.comingSoon);
+    if (isComingSoon) {
+        buyButton.textContent = "قريبًا";
+        buyButton.disabled = true;
+        buyButton.classList.remove("is-purchased");
+        purchaseStatus.hidden = true;
+        purchaseStatus.textContent = "";
+        downloadButton.hidden = true;
+        return;
+    }
     buyButton.textContent = isFree ? "اقرأ مجانًا" : purchased ? "قراءة الكتاب" : pending ? "بانتظار تأكيد الدفع" : "أضف للسلة";
     buyButton.classList.toggle("is-purchased", purchased);
     buyButton.disabled = pending;
@@ -179,7 +190,9 @@ async function loadComments(force = false) {
 
 buyButton.addEventListener("click", async event => {
     const isFree = Number(book?.price) <= 0 && (book?.hasPdf ?? Boolean(book?.pdfFile));
+    const isComingSoon = Boolean(book?.isComingSoon || book?.comingSoon);
     if (redirectGuest(event)) return;
+    if (isComingSoon) return;
     if (isFree) {
         window.location.href = `reader.html?id=${encodeURIComponent(book._id)}`;
         return;

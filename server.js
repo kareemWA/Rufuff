@@ -57,6 +57,7 @@ const bookSchema = new mongoose.Schema({
     pageCount: { type: Number, min: 1, max: 100000, default: null },
     originalPrice: { type: Number },
     discountPercent: { type: Number, min: 0, max: 90, default: DEFAULT_DISCOUNT_PERCENT },
+    isComingSoon: { type: Boolean, default: false },
     seriesId: { type: mongoose.Schema.Types.ObjectId, ref: "Series", default: null },
     image: { type: String, required: true },
     description: { type: String, default: "كتاب رقمي مختار بعناية من رفوف." },
@@ -213,6 +214,7 @@ async function findBookSummaries(filter = {}, options = {}) {
             pageCount: 1,
             originalPrice: 1,
             discountPercent: 1,
+            isComingSoon: 1,
             seriesId: 1,
             image: 1,
             description: 1,
@@ -730,6 +732,59 @@ app.put("/api/admin/books/:bookId/series", requireAdmin, async (req, res) => {
     }
 });
 
+app.put("/api/admin/books/:bookId", requireAdmin, async (req, res) => {
+    try {
+        const rawBookId = String(req.params.bookId || "").trim();
+        if (!mongoose.Types.ObjectId.isValid(rawBookId)) {
+            return res.status(400).send("معرّف الكتاب غير صالح");
+        }
+
+        const existingBook = await Book.findById(rawBookId);
+        if (!existingBook) return res.status(404).send("الكتاب غير موجود");
+
+        const { title, author, price, pageCount, discountPercent, cover, file, description, seriesId, isComingSoon } = req.body;
+        const titleValue = String(title || "").trim();
+        const authorValue = String(author || "").trim();
+        const basePrice = Number(price);
+        const normalizedPageCount = pageCount === "" || pageCount == null ? null : Number(pageCount);
+        const discount = Math.min(90, Math.max(0, Number(discountPercent || 0)));
+        const finalCover = typeof cover === "string" ? cover.trim() : existingBook.image;
+        const finalFile = typeof file === "string" ? (file.trim() || null) : (file ?? existingBook.pdfFile ?? null);
+        const comingSoonValue = isComingSoon === true || isComingSoon === "true" || isComingSoon === "on";
+
+        if (!titleValue || !authorValue) return res.status(400).send("العنوان والمؤلف مطلوبان");
+        if (!Number.isFinite(basePrice) || basePrice < 0) return res.status(400).send("السعر يجب أن يكون صفرًا أو أكبر");
+        if (normalizedPageCount !== null && (!Number.isInteger(normalizedPageCount) || normalizedPageCount < 1 || normalizedPageCount > 100000)) return res.status(400).send("عدد الصفحات يجب أن يكون رقمًا صحيحًا بين 1 و100000");
+        if (!Number.isFinite(discount)) return res.status(400).send("نسبة الخصم غير صحيحة");
+        if (!finalCover || !/^https:\/\/[^"]+$/i.test(finalCover)) return res.status(400).send("رابط صورة الغلاف الخارجي عبر HTTPS مطلوب");
+        if (finalFile && !/^https:\/\/[^"]+$/i.test(String(finalFile).trim())) return res.status(400).send("رابط ملف PDF خارجي عبر HTTPS مطلوب");
+
+        const finalPrice = Math.round(basePrice * (100 - discount) / 100 * 100) / 100;
+
+        if (seriesId && !await Series.exists({ _id: seriesId })) return res.status(404).send("السلسلة غير موجودة");
+
+        existingBook.title = titleValue;
+        existingBook.author = authorValue;
+        existingBook.category = "كتب";
+        existingBook.price = finalPrice;
+        existingBook.pageCount = normalizedPageCount;
+        existingBook.originalPrice = basePrice;
+        existingBook.discountPercent = discount;
+        existingBook.isComingSoon = comingSoonValue;
+        existingBook.image = finalCover;
+        existingBook.pdfFile = finalFile || null;
+        existingBook.description = description || "كتاب رقمي مختار بعناية من رفوف.";
+        existingBook.seriesId = seriesId || null;
+
+        await existingBook.save();
+        res.json(publicBook(existingBook.toObject()));
+    } catch (error) {
+        console.error("Update book error:", error);
+        if (error?.code === 11000) return res.status(409).send("عنوان الكتاب موجود بالفعل");
+        res.status(400).send(error.message || "تعذر تحديث الكتاب");
+    }
+});
+
 app.get("/api/admin/series", requireAdmin, async (req, res) => {
     try {
         res.json(await Series.find().sort({ createdAt: -1 }).lean());
@@ -750,18 +805,19 @@ app.delete("/api/admin/series/:seriesId", requireAdmin, async (req, res) => {
 
 app.post("/api/admin/books", requireAdmin, async (req, res) => {
     try {
-        const { title, author, price, pageCount, discountPercent, cover, file, description, seriesId } = req.body;
+        const { title, author, price, pageCount, discountPercent, cover, file, description, seriesId, isComingSoon } = req.body;
         const normalizedCategory = "كتب";
         const basePrice = Number(price);
         const normalizedPageCount = pageCount === "" || pageCount == null ? null : Number(pageCount);
         const discount = Math.min(90, Math.max(0, Number(discountPercent || 0)));
+        const comingSoonValue = isComingSoon === true || isComingSoon === "true" || isComingSoon === "on";
         if (!Number.isFinite(basePrice) || basePrice < 0) return res.status(400).send("السعر يجب أن يكون صفرًا أو أكبر");
         if (normalizedPageCount !== null && (!Number.isInteger(normalizedPageCount) || normalizedPageCount < 1 || normalizedPageCount > 100000)) return res.status(400).send("عدد الصفحات يجب أن يكون رقمًا صحيحًا بين 1 و100000");
         if (!Number.isFinite(discount)) return res.status(400).send("نسبة الخصم غير صحيحة");
         if (typeof cover !== "string" || !/^https:\/\/[^\s]+$/i.test(cover.trim())) return res.status(400).send("رابط صورة الغلاف الخارجي عبر HTTPS مطلوب");
         if (file && !/^https:\/\/[^\s]+$/i.test(String(file).trim())) return res.status(400).send("رابط ملف PDF خارجي عبر HTTPS مطلوب");
         const finalPrice = Math.round(basePrice * (100 - discount) / 100 * 100) / 100;
-        const book = await Book.create({ title, author, category: normalizedCategory, price: finalPrice, pageCount: normalizedPageCount, originalPrice: basePrice, discountPercent: discount, image: cover, pdfFile: file || null, description, seriesId: seriesId || null });
+        const book = await Book.create({ title, author, category: normalizedCategory, price: finalPrice, pageCount: normalizedPageCount, originalPrice: basePrice, discountPercent: discount, isComingSoon: comingSoonValue, image: cover, pdfFile: file || null, description, seriesId: seriesId || null });
         res.status(201).json(book);
     } catch (error) {
         res.status(400).send("تعذر حفظ الكتاب");

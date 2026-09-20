@@ -43,11 +43,15 @@
     <section class="forms">
         <form class="panel" id="bookForm">
             <h2>إضافة كتاب</h2>
+            <input type="hidden" name="bookId" value="">
+            <input type="hidden" name="existingCover" value="">
+            <input type="hidden" name="existingFile" value="">
             <label>العنوان<input name="title" required></label>
             <label>المؤلف<input name="author" required></label>
             <label>السعر (اكتب 0 للكتاب المجاني)<input name="price" type="number" min="0" step="0.01" required></label>
             <label>عدد صفحات الكتاب<input name="pageCount" type="number" min="1" max="100000" step="1" placeholder="اختياري"></label>
             <label>نسبة الخصم<input name="discountPercent" type="number" min="0" max="90" value="0"></label>
+            <label><input name="isComingSoon" type="checkbox"> هذا الكتاب قادم قريبًا</label>
             <label>رفع صورة الغلاف من الجهاز<input name="coverFile" type="file" accept="image/png,image/jpeg,image/webp,image/avif"></label>
             <label>أو رابط صورة الغلاف من CDN<input name="cover" type="url" placeholder="https://..."></label>
             <label>رفع ملف الكتاب PDF من الجهاز<input name="fileUpload" type="file" accept="application/pdf,.pdf"></label>

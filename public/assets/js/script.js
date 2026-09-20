@@ -283,7 +283,8 @@ async function logoutUser() {
 
 function createBookCard(book, index = 0) {
     const article = document.createElement("article");
-    article.className = "one_videos";
+    const isComingSoon = Boolean(book.isComingSoon || book.comingSoon);
+    article.className = `one_videos ${isComingSoon ? "is-coming-soon" : ""}`;
     article.dataset.category = "كتب";
     article.dataset.title = book.title;
     article.dataset.bookId = String(book._id || "");
@@ -296,44 +297,48 @@ function createBookCard(book, index = 0) {
         <div class="book-info">
             <div class="book-top-bar">
                 <span class="book-category">كتب</span>
-                ${(book.hasPdf ?? Boolean(book.pdfFile)) ? '<span class="book-pdf-tag">كتاب PDF</span>' : ""}
+                ${isComingSoon ? '<span class="book-pdf-tag coming-soon-tag">قريبًا</span>' : (book.hasPdf ?? Boolean(book.pdfFile)) ? '<span class="book-pdf-tag">كتاب PDF</span>' : ""}
             </div>
             <h3>${book.title}</h3>
             <p>${book.author}</p>
             <div class="book-meta-row">
-
                 <div class="book-price-group">
-                    <div class="price-box"><strong class="price">${book.price} جنيه</strong><del>${book.originalPrice || book.price} جنيه</del><span class="discount-badge">خصم ${book.discountPercent || 0}%</span></div>
+                    ${isComingSoon
+                        ? '<div class="price-box"><strong class="price">قريبًا</strong><span class="discount-badge">سيتوفر قريبًا</span></div>'
+                        : `<div class="price-box"><strong class="price">${book.price} جنيه</strong><del>${book.originalPrice || book.price} جنيه</del><span class="discount-badge">خصم ${book.discountPercent || 0}%</span></div>`}
                 </div>
-                            ${book.pageCount ? `<span class="book-pages" aria-label="عدد صفحات الكتاب">${book.pageCount}</span>` : ""}
+                ${book.pageCount ? `<span class="book-pages" aria-label="عدد صفحات الكتاب">${book.pageCount}</span>` : ""}
             </div>
             <div class="book-actions-row">
                 <a class="book-details-link" href="book-detail.html?id=${book._id}">التفاصيل</a>
-
             </div>
             <div class="book-footer">
-                ${Number(book.price) <= 0 && (book.hasPdf ?? Boolean(book.pdfFile))
-                    ? `<a class="btn buy-book" href="reader.html?id=${encodeURIComponent(book._id)}">اقرأ مجانًا</a>`
-                    : '<button class="btn buy-book" type="button">أضف للسلة</button>'}
+                ${isComingSoon
+                    ? '<button class="btn buy-book" type="button" disabled>قريبًا</button>'
+                    : Number(book.price) <= 0 && (book.hasPdf ?? Boolean(book.pdfFile))
+                        ? `<a class="btn buy-book" href="reader.html?id=${encodeURIComponent(book._id)}">اقرأ مجانًا</a>`
+                        : '<button class="btn buy-book" type="button">أضف للسلة</button>'}
             </div>
             <p class="book-message" role="status" aria-live="polite"></p>
         </div>`;
 
     const buyControl = article.querySelector(".buy-book");
-    buyControl.addEventListener("click", event => {
-        if (redirectGuest(event)) return;
-        if (buyControl.tagName === "A") return;
-        const message = article.querySelector(".book-message");
-        if (!cart.some(item => item._id === book._id)) {
-            cart.push(book);
-            updateCart();
-            message.textContent = "أُضيف الكتاب إلى السلة.";
-            message.className = "book-message success";
-        } else {
-            message.textContent = "الكتاب موجود في السلة بالفعل.";
-            message.className = "book-message";
-        }
-    });
+    if (!isComingSoon) {
+        buyControl.addEventListener("click", event => {
+            if (redirectGuest(event)) return;
+            if (buyControl.tagName === "A") return;
+            const message = article.querySelector(".book-message");
+            if (!cart.some(item => item._id === book._id)) {
+                cart.push(book);
+                updateCart();
+                message.textContent = "أُضيف الكتاب إلى السلة.";
+                message.className = "book-message success";
+            } else {
+                message.textContent = "الكتاب موجود في السلة بالفعل.";
+                message.className = "book-message";
+            }
+        });
+    }
 
     article.querySelector(".book-details-link").addEventListener("click", redirectGuest);
 
