@@ -512,7 +512,7 @@ async function updateCart() {
 
 function renderCategories(categories) {
     if (!categoriesList) return;
-    categoriesList.innerHTML = '<button class="category active" data-category="all" type="button">كتب</button>';
+    categoriesList.innerHTML = '<button class="category active" data-category="all" type="button">كتب</button><a class="category chat-category-button" href="chat.html">💬 دردشة</a>';
     categoryButtons = [...categoriesList.querySelectorAll(".category")];
     categoryButtons.forEach(button => button.addEventListener("click", () => {
         categoryButtons.forEach(item => item.classList.remove("active"));
