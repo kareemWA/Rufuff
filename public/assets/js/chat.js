@@ -5,9 +5,12 @@ const chatText = document.getElementById("chatText");
 const chatStatus = document.getElementById("chatStatus");
 const chatNote = document.getElementById("chatNote");
 const roomButtons = Array.from(document.querySelectorAll(".chat-card"));
+const roomPicker = document.querySelector(".chat-cards");
+const chatHero = document.getElementById("chatHero");
 const founderInbox = document.getElementById("founderInbox");
 const conversationList = document.getElementById("conversationList");
 const isAdmin = currentUser?.role === "admin";
+const requestedRoom = new URLSearchParams(window.location.search).get("room");
 let currentRoom = "founder";
 let selectedConversation = "";
 
@@ -98,6 +101,16 @@ if (!currentUser?.email) {
         roomButtons.forEach(button => button.hidden = true);
         chatNote.textContent = "اختر عضوًا من القائمة لعرض رسائله والرد عليه.";
         loadConversations();
+    } else if (["founder", "public"].includes(requestedRoom)) {
+        currentRoom = requestedRoom;
+        roomPicker.hidden = true;
+        chatHero.querySelector("h1").textContent = currentRoom === "founder" ? "الدردشة الخاصة" : "دردشة المجتمع";
+        chatHero.querySelector("p").textContent = currentRoom === "founder"
+            ? "رسائلك هنا يراها أنت ومؤسس رفوف فقط."
+            : "شارك أفكارك مع أعضاء رفوف في مساحة المجتمع.";
+        chatNote.textContent = currentRoom === "public"
+            ? "كل أعضاء رفوف المسجلين يستطيعون رؤية رسائل هذه الغرفة."
+            : "رسائلك هنا يراها أنت ومؤسس رفوف فقط.";
     }
 
     roomButtons.forEach(button => button.addEventListener("click", () => {

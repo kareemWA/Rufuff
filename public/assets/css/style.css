@@ -75,6 +75,7 @@ body.dark-mode .welcome { background: linear-gradient(120deg, #29453a, #3d3b2f);
 .chat-category-view .chat-cards { margin-bottom: 0; }
 .chat-category-view .chat-card { cursor: default; }
 .chat-category-view .chat-card:hover { transform: translateY(-3px); }
+.chat-card-button { display: block; margin: 10px 4px 2px; text-align: center; }
 .first_videos { width: min(1120px, calc(100% - 40px)); display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 280px)); justify-content: start; gap: 18px; margin: 0 auto 55px; }
 .one_videos { padding: 10px; border: 1px solid var(--border); border-radius: 15px; background: var(--surface); box-shadow: var(--shadow); transition: transform .25s, box-shadow .25s; }
 .one_videos:hover { transform: translateY(-5px); box-shadow: 0 20px 42px rgba(69, 57, 42, .15); }
