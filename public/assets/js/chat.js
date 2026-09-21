@@ -82,7 +82,7 @@ async function loadConversations() {
 }
 
 if (!currentUser?.email) {
-    window.location.href = "signin.html";
+    window.location.href = "index.html?auth=login&return=/chat.html";
 } else {
     document.getElementById("naMe").textContent = currentUser.name || "حسابي";
     if (currentUser.avatar) document.getElementById("photo").src = currentUser.avatar;
@@ -90,7 +90,7 @@ if (!currentUser?.email) {
         event.preventDefault();
         await fetch("/logout", { method: "POST" });
         localStorage.removeItem("currentUser");
-        window.location.href = "signin.html";
+        window.location.href = "index.html";
     });
 
     if (isAdmin) {
