@@ -535,6 +535,8 @@ function renderCategories(categories) {
         selectedCategory = isChatCategory ? "chat" : "all";
         chatCategoryView?.toggleAttribute("hidden", !isChatCategory);
         booksSection?.toggleAttribute("hidden", isChatCategory);
+        if (chatCategoryView) chatCategoryView.style.display = isChatCategory ? "" : "none";
+        if (booksSection) booksSection.style.display = isChatCategory ? "none" : "";
         if (!isChatCategory) renderBooks();
     }));
 }
