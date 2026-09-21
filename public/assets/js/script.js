@@ -524,13 +524,18 @@ async function updateCart() {
 
 function renderCategories(categories) {
     if (!categoriesList) return;
-    categoriesList.innerHTML = '<button class="category active" data-category="all" type="button">كتب</button><a class="category chat-category-button" href="chat.html">💬 دردشة</a>';
+    const chatCategoryView = document.getElementById("chatCategoryView");
+    const booksSection = document.getElementById("books");
+    categoriesList.innerHTML = '<button class="category active" data-category="all" type="button">كتب</button><button class="category chat-category-button" data-category="chat" type="button">💬 دردشة</button>';
     categoryButtons = [...categoriesList.querySelectorAll(".category")];
     categoryButtons.forEach(button => button.addEventListener("click", () => {
         categoryButtons.forEach(item => item.classList.remove("active"));
         button.classList.add("active");
-        selectedCategory = "all";
-        renderBooks();
+        const isChatCategory = button.dataset.category === "chat";
+        selectedCategory = isChatCategory ? "chat" : "all";
+        chatCategoryView?.toggleAttribute("hidden", !isChatCategory);
+        booksSection?.toggleAttribute("hidden", isChatCategory);
+        if (!isChatCategory) renderBooks();
     }));
 }
 

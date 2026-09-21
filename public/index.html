@@ -77,7 +77,34 @@
             </div>
             <div id="categoriesList" class="categories" aria-label="مجتمع برمجي">
                 <button class="category active" data-category="all" type="button">كتب</button>
-                <a class="category chat-category-button" href="chat.html">💬 دردشة</a>
+                <button class="category chat-category-button" data-category="chat" type="button">💬 دردشة</button>
+            </div>
+        </section>
+
+        <section id="chatCategoryView" class="chat-category-view" hidden>
+            <div class="chat-category-heading">
+                <div>
+                    <h2>مساحات الدردشة</h2>
+                    <p>اختر المساحة المناسبة ثم افتح الدردشة للتواصل مع رفوف.</p>
+                </div>
+                <a class="btn" href="chat.html">فتح الدردشة</a>
+            </div>
+            <div class="chat-cards" aria-label="غرف الدردشة">
+                <article class="chat-card">
+                    <img src="icon/f.jpg" alt="صورة مؤسس رفوف">
+                    <span class="chat-card-content">
+                        <strong>دردشة خاصة مع مؤسس رفوف</strong>
+                        <small>رسالتك تصل إلى المؤسس فقط</small>
+                    </span>
+                    <span class="premium-badge">Premium</span>
+                </article>
+                <article class="chat-card">
+                    <span class="community-icon"><img src="icon/c.jpg" alt="صورة المجتمع"></span>
+                    <span class="chat-card-content">
+                        <strong>دردشة المجتمع</strong>
+                        <small>شارك أفكارك مع أعضاء رفوف</small>
+                    </span>
+                </article>
             </div>
         </section>
 
@@ -135,6 +162,6 @@
         <div><a href="mailto:kareemgera1@gmail.com">بريد الالكتروني</a></div>
     </footer>
     <script src="assets/js/library.js"></script>
-    <script src="assets/js/script.js?v=4"></script>
+    <script src="assets/js/script.js?v=5"></script>
 </body>
 </html>
