@@ -4,8 +4,8 @@ const chatForm = document.getElementById("chatForm");
 const chatText = document.getElementById("chatText");
 const chatStatus = document.getElementById("chatStatus");
 const chatNote = document.getElementById("chatNote");
-const roomButtons = Array.from(document.querySelectorAll(".chat-tab"));
-let currentRoom = "public";
+const roomButtons = Array.from(document.querySelectorAll(".chat-card"));
+let currentRoom = "founder";
 
 function escapeHtml(value) {
     return String(value ?? "").replace(/[&<>'"]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[character]));
@@ -54,7 +54,11 @@ if (!currentUser?.email) {
 
     roomButtons.forEach(button => button.addEventListener("click", () => {
         currentRoom = button.dataset.room;
-        roomButtons.forEach(item => item.classList.toggle("active", item === button));
+        roomButtons.forEach(item => {
+            const isActive = item === button;
+            item.classList.toggle("active", isActive);
+            item.setAttribute("aria-selected", String(isActive));
+        });
         chatNote.textContent = currentRoom === "public"
             ? "كل أعضاء رفوف المسجلين يستطيعون رؤية رسائل هذه الغرفة."
             : "رسائلك هنا يراها أنت ومؤسس رفوف فقط.";

@@ -35,12 +35,25 @@
     <main class="chat-main">
         <section class="chat-hero">
             <h1>دردشة رفوف</h1>
-            <p>مساحة للتواصل مع أعضاء المجتمع، ورسالة خاصة تصل إلى مؤسس رفوف فقط.</p>
+            <p>اختر مساحتك: تحدث مع مؤسس رفوف بشكل خاص أو شارك المجتمع أفكارك.</p>
         </section>
         <section class="chat-shell">
-            <div class="chat-tabs" role="tablist" aria-label="غرف الدردشة">
-                <button class="chat-tab active" type="button" data-room="public" role="tab">الدردشة العامة</button>
-                <button class="chat-tab" type="button" data-room="founder" role="tab">رسالة إلى المؤسس</button>
+            <div class="chat-cards" role="tablist" aria-label="غرف الدردشة">
+                <button class="chat-card active" type="button" data-room="founder" role="tab" aria-selected="true">
+                    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTH4qo2FqKLWRvoIFuXfE_reXlHh2I_DMpeWQ&s" alt="صورة مؤسس رفوف">
+                    <span class="chat-card-content">
+                        <strong>دردشة خاصة مع مؤسس رفوف</strong>
+                        <small>رسالتك تصل إلى المؤسس فقط</small>
+                    </span>
+                    <span class="premium-badge">Premium</span>
+                </button>
+                <button class="chat-card" type="button" data-room="public" role="tab" aria-selected="false">
+                    <span class="community-icon" aria-hidden="true">✦</span>
+                    <span class="chat-card-content">
+                        <strong>دردشة المجتمع</strong>
+                        <small>شارك أفكارك مع أعضاء رفوف</small>
+                    </span>
+                </button>
             </div>
             <p class="chat-note" id="chatNote">كل أعضاء رفوف المسجلين يستطيعون رؤية رسائل هذه الغرفة.</p>
             <div class="chat-messages" id="chatMessages" aria-live="polite"><p class="no">جارٍ تحميل الرسائل...</p></div>
