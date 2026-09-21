@@ -115,6 +115,16 @@ commentSchema.index({ bookId: 1, createdAt: -1 });
 
 const Comment = mongoose.model("Comment", commentSchema);
 
+const chatMessageSchema = new mongoose.Schema({
+    room: { type: String, enum: ["public", "founder"], required: true },
+    userEmail: { type: String, required: true },
+    userName: { type: String, required: true },
+    text: { type: String, required: true, trim: true, maxlength: 1000 }
+}, { timestamps: true });
+chatMessageSchema.index({ room: 1, createdAt: -1 });
+
+const ChatMessage = mongoose.model("ChatMessage", chatMessageSchema);
+
 const librarySchema = new mongoose.Schema({
     userEmail: { type: String, required: true, unique: true },
     cartBookIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Book" }],
@@ -437,6 +447,41 @@ app.get("/courses", (req, res) => {
 
 app.get("/api/me", requireUser, (req, res) => {
     res.json(publicUser(req.currentUser));
+});
+
+app.get("/api/chat/messages", requireUser, async (req, res) => {
+    try {
+        const room = req.query.room === "founder" ? "founder" : "public";
+        const filter = room === "public"
+            ? { room }
+            : { room, $or: [{ userEmail: req.currentUser.email }, ...(req.currentUser.role === "admin" ? [{}] : [])] };
+        const messages = await ChatMessage.find(filter).sort({ createdAt: -1 }).limit(100).lean();
+        res.json(messages.reverse().map(message => ({
+            id: String(message._id),
+            room: message.room,
+            userName: message.userName,
+            text: message.text,
+            createdAt: message.createdAt,
+            mine: message.userEmail === req.currentUser.email
+        })));
+    } catch (error) {
+        res.status(500).send("تعذر تحميل رسائل الدردشة");
+    }
+});
+
+app.post("/api/chat/messages", requireUser, async (req, res) => {
+    try {
+        const room = req.body.room === "founder" ? "founder" : "public";
+        const text = String(req.body.text || "").trim();
+        if (!text || text.length > 1000) return res.status(400).send("اكتب رسالة من 1 إلى 1000 حرف");
+        const message = await ChatMessage.create({ room, userEmail: req.currentUser.email, userName: req.currentUser.name, text });
+        res.status(201).json({
+            id: String(message._id), room: message.room, userName: message.userName,
+            text: message.text, createdAt: message.createdAt, mine: true
+        });
+    } catch (error) {
+        res.status(500).send("تعذر إرسال الرسالة");
+    }
 });
 
 app.get("/api/library", requireUser, async (req, res) => {
@@ -1404,7 +1449,8 @@ app.delete("/api/me", requireUser, async (req, res) => {
             Library.deleteOne({ userEmail: email }),
             Purchase.deleteMany({ userEmail: email }),
             Payment.deleteMany({ userEmail: email }),
-            Comment.deleteMany({ userEmail: email })
+            Comment.deleteMany({ userEmail: email }),
+            ChatMessage.deleteMany({ userEmail: email })
         ]);
         clearSessionCookie(res);
         res.status(204).end();

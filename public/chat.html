@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>رفوف | دردشة</title>
+    <link rel="icon" type="image/png" href="icon/icn.png">
+    <link rel="stylesheet" href="assets/css/style.css?v=3">
+    <link rel="stylesheet" href="assets/css/sidebar-fix.css?v=1">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <div class="brand">
+            <a href="index.html" class="site-brand" aria-label="رفوف"><img src="icon/icn.png" alt="شعار رفوف"><span>رفوف</span></a>
+            <button class="btn-open-list" id="menuBtn" type="button" aria-label="فتح القائمة"><span class="menu-icon" aria-hidden="true"></span></button>
+        </div>
+        <a href="sitting.html" class="acc"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTH4qo2FqKLWRvoIFuXfE_reXlHh2I_DMpeWQ&s" id="photo" alt="صورة الحساب"><h3 id="naMe">حسابي</h3></a>
+    </header>
+
+    <aside class="sidebar-drawer" aria-label="القائمة الجانبية">
+        <section class="list nav">
+            <a href="index.html">⌂&nbsp; الرئيسية</a>
+            <a href="index.html#books">▦&nbsp; كل المحتوى</a>
+            <a href="chat.html" class="is-current" aria-current="page">💬&nbsp; دردشة</a>
+            <a href="favorites.html">♡&nbsp; المفضلة</a>
+        </section>
+        <section class="list_bottom nav_bottom">
+            <a href="sitting.html">⚙&nbsp; الإعدادات</a>
+            <a href="purchased.html">▤&nbsp; كتبي المشتراة</a>
+            <a id="logout" href="signin.html">تسجيل الدخول</a>
+        </section>
+    </aside>
+
+    <main class="chat-main">
+        <section class="chat-hero">
+            <h1>دردشة رفوف</h1>
+            <p>مساحة للتواصل مع أعضاء المجتمع، ورسالة خاصة تصل إلى مؤسس رفوف فقط.</p>
+        </section>
+        <section class="chat-shell">
+            <div class="chat-tabs" role="tablist" aria-label="غرف الدردشة">
+                <button class="chat-tab active" type="button" data-room="public" role="tab">الدردشة العامة</button>
+                <button class="chat-tab" type="button" data-room="founder" role="tab">رسالة إلى المؤسس</button>
+            </div>
+            <p class="chat-note" id="chatNote">كل أعضاء رفوف المسجلين يستطيعون رؤية رسائل هذه الغرفة.</p>
+            <div class="chat-messages" id="chatMessages" aria-live="polite"><p class="no">جارٍ تحميل الرسائل...</p></div>
+            <form class="chat-form" id="chatForm">
+                <textarea id="chatText" maxlength="1000" placeholder="اكتب رسالتك..." required></textarea>
+                <button class="btn" type="submit">إرسال الرسالة</button>
+            </form>
+            <p class="form-message" id="chatStatus" role="status" aria-live="polite"></p>
+        </section>
+    </main>
+    <script src="assets/js/chat.js"></script>
+</body>
+</html>

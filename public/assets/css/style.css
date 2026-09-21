@@ -166,6 +166,26 @@ body.dark-mode .welcome { background: linear-gradient(120deg, #29453a, #3d3b2f);
 .comment-form textarea { min-height: 110px; padding: 12px; resize: vertical; }
 .comment-form select:focus, .comment-form textarea:focus { border-color: var(--primary); }
 .comment-form .btn { width: auto; margin-top: 16px; }
+.chat-main { width: min(900px, calc(100% - 32px)); margin: 42px auto 70px; }
+.chat-hero { margin-bottom: 22px; }
+.chat-hero h1 { margin: 0 0 8px; font-family: Georgia, serif; font-size: 38px; font-weight: 400; }
+.chat-hero p { margin: 0; color: var(--muted); }
+.chat-shell { padding: clamp(18px, 4vw, 32px); border: 1px solid var(--border); border-radius: 20px; background: var(--surface); box-shadow: var(--shadow); }
+.chat-tabs { display: flex; gap: 8px; margin-bottom: 18px; }
+.chat-tab { border: 1px solid var(--border); border-radius: 20px; padding: 9px 15px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; }
+.chat-tab.active, .chat-tab:hover { border-color: var(--primary); background: var(--primary); color: #fff; }
+.chat-note { margin: 0 0 16px; color: var(--muted); font-size: 12px; }
+.chat-messages { display: grid; gap: 10px; min-height: 300px; max-height: 520px; padding: 4px; overflow-y: auto; }
+.chat-message { max-width: 78%; padding: 10px 13px; border: 1px solid var(--border); border-radius: 13px; background: var(--soft); }
+.chat-message.mine { margin-right: auto; border-color: rgba(49, 94, 80, .22); background: rgba(49, 94, 80, .1); }
+.chat-message strong { display: block; color: var(--primary); font-size: 12px; }
+.chat-message p { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.7; }
+.chat-message time { display: block; margin-top: 5px; color: var(--muted); font-size: 10px; }
+.chat-form { display: flex; gap: 9px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border); }
+.chat-form textarea { flex: 1; min-height: 48px; max-height: 130px; padding: 11px; resize: vertical; border: 1px solid var(--border); border-radius: 10px; outline: 0; background: var(--surface); color: var(--text); font: inherit; font-size: 13px; }
+.chat-form textarea:focus { border-color: var(--primary); }
+.chat-form .btn { align-self: flex-end; white-space: nowrap; }
+@media (max-width: 600px) { .chat-main { margin-top: 28px; } .chat-hero h1 { font-size: 30px; } .chat-message { max-width: 90%; } .chat-form { align-items: stretch; flex-direction: column; } .chat-form .btn { align-self: stretch; } }
 
 /* Shared authentication surface */
 .auth-page { position: relative; display: grid; place-items: center; min-height: 100vh; padding: 28px 16px 92px; background: var(--bg) !important; color: var(--text); }
