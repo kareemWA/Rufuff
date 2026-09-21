@@ -117,11 +117,13 @@ const Comment = mongoose.model("Comment", commentSchema);
 
 const chatMessageSchema = new mongoose.Schema({
     room: { type: String, enum: ["public", "founder"], required: true },
+    conversationEmail: { type: String, default: null },
     userEmail: { type: String, required: true },
     userName: { type: String, required: true },
     text: { type: String, required: true, trim: true, maxlength: 1000 }
 }, { timestamps: true });
 chatMessageSchema.index({ room: 1, createdAt: -1 });
+chatMessageSchema.index({ room: 1, conversationEmail: 1, createdAt: -1 });
 
 const ChatMessage = mongoose.model("ChatMessage", chatMessageSchema);
 
@@ -452,13 +454,22 @@ app.get("/api/me", requireUser, (req, res) => {
 app.get("/api/chat/messages", requireUser, async (req, res) => {
     try {
         const room = req.query.room === "founder" ? "founder" : "public";
-        const filter = room === "public"
-            ? { room }
-            : { room, $or: [{ userEmail: req.currentUser.email }, ...(req.currentUser.role === "admin" ? [{}] : [])] };
+        const isAdmin = req.currentUser.role === "admin" || isConfiguredAdminEmail(req.currentUser.email);
+        const filter = { room };
+        if (room === "founder") {
+            const conversationEmail = isAdmin && req.query.conversation
+                ? normalizeEmail(req.query.conversation)
+                : normalizeEmail(req.currentUser.email);
+            filter.$or = [
+                { conversationEmail },
+                { conversationEmail: { $exists: false }, userEmail: conversationEmail }
+            ];
+        }
         const messages = await ChatMessage.find(filter).sort({ createdAt: -1 }).limit(100).lean();
         res.json(messages.reverse().map(message => ({
             id: String(message._id),
             room: message.room,
+            conversationEmail: message.conversationEmail || message.userEmail,
             userName: message.userName,
             text: message.text,
             createdAt: message.createdAt,
@@ -474,13 +485,40 @@ app.post("/api/chat/messages", requireUser, async (req, res) => {
         const room = req.body.room === "founder" ? "founder" : "public";
         const text = String(req.body.text || "").trim();
         if (!text || text.length > 1000) return res.status(400).send("اكتب رسالة من 1 إلى 1000 حرف");
-        const message = await ChatMessage.create({ room, userEmail: req.currentUser.email, userName: req.currentUser.name, text });
+        const isAdmin = req.currentUser.role === "admin" || isConfiguredAdminEmail(req.currentUser.email);
+        const conversationEmail = room === "founder"
+            ? (isAdmin ? normalizeEmail(req.body.recipientEmail) : normalizeEmail(req.currentUser.email))
+            : null;
+        if (room === "founder" && !conversationEmail) return res.status(400).send("اختر محادثة لإرسال الرسالة");
+        const message = await ChatMessage.create({ room, conversationEmail, userEmail: req.currentUser.email, userName: req.currentUser.name, text });
         res.status(201).json({
-            id: String(message._id), room: message.room, userName: message.userName,
+            id: String(message._id), room: message.room, conversationEmail: message.conversationEmail,
+            userName: message.userName,
             text: message.text, createdAt: message.createdAt, mine: true
         });
     } catch (error) {
         res.status(500).send("تعذر إرسال الرسالة");
+    }
+});
+
+app.get("/api/chat/conversations", requireAdmin, async (req, res) => {
+    try {
+        const messages = await ChatMessage.find({ room: "founder" }).sort({ createdAt: -1 }).lean();
+        const conversations = new Map();
+        messages.forEach(message => {
+            const email = normalizeEmail(message.conversationEmail || message.userEmail);
+            if (!email || conversations.has(email)) return;
+            conversations.set(email, { email, name: message.userName, lastMessage: message.text, createdAt: message.createdAt });
+        });
+        const emails = [...conversations.keys()];
+        const users = await User.find({ email: { $in: emails } }).select("email name photo").lean();
+        const userByEmail = new Map(users.map(user => [user.email, user]));
+        res.json([...conversations.values()].map(conversation => {
+            const user = userByEmail.get(conversation.email);
+            return { ...conversation, name: user?.name || conversation.name, avatar: user?.photo || null };
+        }));
+    } catch (error) {
+        res.status(500).send("تعذر تحميل محادثات المؤسس");
     }
 });
 

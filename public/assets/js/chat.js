@@ -5,7 +5,11 @@ const chatText = document.getElementById("chatText");
 const chatStatus = document.getElementById("chatStatus");
 const chatNote = document.getElementById("chatNote");
 const roomButtons = Array.from(document.querySelectorAll(".chat-card"));
+const founderInbox = document.getElementById("founderInbox");
+const conversationList = document.getElementById("conversationList");
+const isAdmin = currentUser?.role === "admin";
 let currentRoom = "founder";
+let selectedConversation = "";
 
 function escapeHtml(value) {
     return String(value ?? "").replace(/[&<>'"]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[character]));
@@ -32,11 +36,48 @@ function renderMessages(messages) {
 
 async function loadMessages() {
     try {
-        const response = await fetch(`/api/chat/messages?room=${currentRoom}`);
+        const conversationQuery = currentRoom === "founder" && selectedConversation
+            ? `&conversation=${encodeURIComponent(selectedConversation)}`
+            : "";
+        const response = await fetch(`/api/chat/messages?room=${currentRoom}${conversationQuery}`);
         if (!response.ok) throw new Error(await response.text());
         renderMessages(await response.json());
     } catch (error) {
         messagesElement.innerHTML = `<p class="no">${escapeHtml(error.message || "تعذر تحميل الرسائل")}</p>`;
+    }
+}
+
+function renderConversations(conversations) {
+    if (!conversations.length) {
+        conversationList.innerHTML = '<p class="no">لا توجد رسائل خاصة حتى الآن.</p>';
+        return;
+    }
+    conversationList.innerHTML = conversations.map(conversation => `
+        <button class="conversation-item${conversation.email === selectedConversation ? " active" : ""}" type="button" data-email="${escapeHtml(conversation.email)}">
+            ${conversation.avatar ? `<img src="${escapeHtml(conversation.avatar)}" alt="">` : '<span class="conversation-avatar">✉</span>'}
+            <span><strong>${escapeHtml(conversation.name)}</strong><small>${escapeHtml(conversation.lastMessage)}</small></span>
+        </button>`).join("");
+    conversationList.querySelectorAll(".conversation-item").forEach(button => button.addEventListener("click", () => {
+        selectedConversation = button.dataset.email;
+        conversationList.querySelectorAll(".conversation-item").forEach(item => item.classList.toggle("active", item === button));
+        chatNote.textContent = `محادثة خاصة مع ${button.querySelector("strong").textContent}`;
+        loadMessages();
+    }));
+}
+
+async function loadConversations() {
+    if (!isAdmin) return;
+    try {
+        const response = await fetch("/api/chat/conversations");
+        if (!response.ok) throw new Error(await response.text());
+        const conversations = await response.json();
+        renderConversations(conversations);
+        if (!selectedConversation && conversations[0]) {
+            selectedConversation = conversations[0].email;
+            conversationList.querySelector(".conversation-item")?.click();
+        }
+    } catch (error) {
+        conversationList.innerHTML = `<p class="no">${escapeHtml(error.message || "تعذر تحميل المحادثات")}</p>`;
     }
 }
 
@@ -52,7 +93,15 @@ if (!currentUser?.email) {
         window.location.href = "signin.html";
     });
 
+    if (isAdmin) {
+        founderInbox.hidden = false;
+        roomButtons.forEach(button => button.hidden = true);
+        chatNote.textContent = "اختر عضوًا من القائمة لعرض رسائله والرد عليه.";
+        loadConversations();
+    }
+
     roomButtons.forEach(button => button.addEventListener("click", () => {
+        if (isAdmin) return;
         currentRoom = button.dataset.room;
         roomButtons.forEach(item => {
             const isActive = item === button;
@@ -75,7 +124,7 @@ if (!currentUser?.email) {
             const response = await fetch("/api/chat/messages", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ room: currentRoom, text })
+                body: JSON.stringify({ room: currentRoom, text, recipientEmail: selectedConversation })
             });
             if (!response.ok) throw new Error(await response.text());
             chatText.value = "";
@@ -87,5 +136,8 @@ if (!currentUser?.email) {
     });
 
     loadMessages();
-    window.setInterval(loadMessages, 5000);
+    window.setInterval(() => {
+        loadMessages();
+        loadConversations();
+    }, 5000);
 }
