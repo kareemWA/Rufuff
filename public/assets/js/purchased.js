@@ -72,7 +72,7 @@ function renderLocalPaymentState(state) {
 async function loadPurchasedBooks(notify = false) {
     if (!currentUser?.email) {
         purchasedStatus.hidden = true;
-        showEmpty("أنشئ حسابًا لرؤية كتبك", "إنشاء حساب", "signin.html?return=/purchased.html");
+        showEmpty("أنشئ حسابًا لرؤية كتبك", "إنشاء حساب", "index.html?auth=signup&return=/purchased.html");
         return;
     }
 

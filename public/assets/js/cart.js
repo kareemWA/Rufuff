@@ -139,7 +139,7 @@ couponCode.addEventListener("input", () => {
 
 checkoutButton.addEventListener("click", async () => {
     if (!currentUser?.email) {
-        window.location.href = `signin.html?return=${encodeURIComponent("/cart.html")}`;
+        window.location.href = `index.html?auth=login&return=${encodeURIComponent("/cart.html")}`;
         return;
     }
 

@@ -21,7 +21,6 @@ const purchaseMessage = document.getElementById("purchaseMessage");
 const favoriteButton = document.getElementById("favoriteButton");
 const downloadButton = document.getElementById("downloadButton");
 const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
-const signupPage = "signin.html";
 const bookId = new URLSearchParams(window.location.search).get("id");
 let book;
 let purchased = false;
@@ -38,7 +37,7 @@ function redirectGuest(event) {
     event.preventDefault();
     event.stopPropagation();
     const returnUrl = `${window.location.pathname}${window.location.search}`;
-    window.location.href = `${signupPage}?return=${encodeURIComponent(returnUrl)}`;
+    window.location.href = `index.html?auth=login&return=${encodeURIComponent(returnUrl)}`;
     return true;
 }
 

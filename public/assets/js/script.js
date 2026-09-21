@@ -13,7 +13,6 @@ const nameElement = document.getElementById("naMe");
 const photo = document.getElementById("photo");
 
 const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
-const signupPage = "signin.html";
 const authModal = document.getElementById("authModal");
 const authTabs = Array.from(document.querySelectorAll(".auth-tab"));
 const authForms = Array.from(document.querySelectorAll(".auth-form"));
@@ -26,6 +25,8 @@ let favorites = [];
 let books = [];
 let categoryButtons = [];
 let purchaseState = null;
+const authParams = new URLSearchParams(window.location.search);
+const authReturnUrl = authParams.get("return");
 const booksCacheKey = "booksCache";
 const categoriesCacheKey = "categoriesCache";
 const localStorageMaxBytes = 200000;
@@ -107,6 +108,12 @@ function hideAuthModal() {
     if (!authModal) return;
     authModal.classList.add("hidden");
     authModal.setAttribute("aria-hidden", "true");
+}
+
+function getSafeAuthReturnUrl() {
+    return authReturnUrl && authReturnUrl.startsWith("/") && !authReturnUrl.startsWith("//")
+        ? authReturnUrl
+        : "index.html";
 }
 
 function redirectGuest(event) {
@@ -210,7 +217,7 @@ if (authModal) {
             const user = await response.json();
             localStorage.setItem("currentUser", JSON.stringify(user));
             hideAuthModal();
-            window.location.reload();
+            window.location.href = getSafeAuthReturnUrl();
         } catch (error) {
             if (authFormMessage) {
                 authFormMessage.textContent = error.message || "تعذر تسجيل الدخول.";
@@ -252,7 +259,7 @@ if (authModal) {
 
             localStorage.setItem("currentUser", JSON.stringify(data));
             hideAuthModal();
-            window.location.reload();
+            window.location.href = getSafeAuthReturnUrl();
         } catch (error) {
             if (authFormMessage) {
                 authFormMessage.textContent = error.message || "تعذر إنشاء الحساب.";
@@ -260,6 +267,11 @@ if (authModal) {
             }
         }
     });
+}
+
+const requestedAuthMode = authParams.get("auth");
+if (authModal && (requestedAuthMode === "login" || requestedAuthMode === "signup")) {
+    showAuthModal(requestedAuthMode);
 }
 
 if (photo) {

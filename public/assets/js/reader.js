@@ -1,86 +1,143 @@
-const readerTitle = document.getElementById("readerTitle");
-const readerAuthor = document.getElementById("readerAuthor");
-const readerStatus = document.getElementById("readerStatus");
-const readerDownload = document.getElementById("readerDownload");
-const readerFrameWrap = document.getElementById("readerFrameWrap");
-const readerControls = document.getElementById("readerControls");
-const pageIndicator = document.getElementById("pageIndicator");
-const prevPageBtn = document.getElementById("prevPageBtn");
-const nextPageBtn = document.getElementById("nextPageBtn");
-const zoomOutBtn = document.getElementById("zoomOutBtn");
-const zoomInBtn = document.getElementById("zoomInBtn");
-const readerFrame = document.getElementById("readerFrame");
-const bookId = new URLSearchParams(window.location.search).get("id");
 const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
+const messagesElement = document.getElementById("chatMessages");
+const chatForm = document.getElementById("chatForm");
+const chatText = document.getElementById("chatText");
+const chatStatus = document.getElementById("chatStatus");
+const chatNote = document.getElementById("chatNote");
+const roomButtons = Array.from(document.querySelectorAll(".chat-card"));
+const founderInbox = document.getElementById("founderInbox");
+const conversationList = document.getElementById("conversationList");
+const isAdmin = currentUser?.role === "admin";
+let currentRoom = "founder";
+let selectedConversation = "";
 
-function normalizeGoogleDrivePdfUrl(url) {
-    if (!url || typeof url !== "string") return url;
-    try {
-        const parsed = new URL(url);
-        const fileId = parsed.searchParams.get("id") || parsed.pathname.match(/\/file\/d\/([^/]+)/i)?.[1];
-        if ((parsed.hostname === "drive.google.com" || parsed.hostname === "docs.google.com") && fileId) {
-            return `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview?embedded=true`;
-        }
-    } catch {
-        // Ignore invalid URLs and keep the original value.
+function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>'"]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[character]));
+}
+
+function showStatus(message, type = "") {
+    chatStatus.textContent = message;
+    chatStatus.className = `form-message ${type}`;
+}
+
+function renderMessages(messages) {
+    if (!messages.length) {
+        messagesElement.innerHTML = '<p class="no">لا توجد رسائل بعد. كن أول من يبدأ الحديث.</p>';
+        return;
     }
-    return url;
+    messagesElement.innerHTML = messages.map(message => `
+        <article class="chat-message${message.mine ? " mine" : ""}">
+            <strong>${escapeHtml(message.userName)}</strong>
+            <p>${escapeHtml(message.text)}</p>
+            <time>${new Date(message.createdAt).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" })}</time>
+        </article>`).join("");
+    messagesElement.scrollTop = messagesElement.scrollHeight;
+}
+
+async function loadMessages() {
+    try {
+        const conversationQuery = currentRoom === "founder" && selectedConversation
+            ? `&conversation=${encodeURIComponent(selectedConversation)}`
+            : "";
+        const response = await fetch(`/api/chat/messages?room=${currentRoom}${conversationQuery}`);
+        if (!response.ok) throw new Error(await response.text());
+        renderMessages(await response.json());
+    } catch (error) {
+        messagesElement.innerHTML = `<p class="no">${escapeHtml(error.message || "تعذر تحميل الرسائل")}</p>`;
+    }
+}
+
+function renderConversations(conversations) {
+    if (!conversations.length) {
+        conversationList.innerHTML = '<p class="no">لا توجد رسائل خاصة حتى الآن.</p>';
+        return;
+    }
+    conversationList.innerHTML = conversations.map(conversation => `
+        <button class="conversation-item${conversation.email === selectedConversation ? " active" : ""}" type="button" data-email="${escapeHtml(conversation.email)}">
+            ${conversation.avatar ? `<img src="${escapeHtml(conversation.avatar)}" alt="">` : '<span class="conversation-avatar">✉</span>'}
+            <span><strong>${escapeHtml(conversation.name)}</strong><small>${escapeHtml(conversation.lastMessage)}</small></span>
+        </button>`).join("");
+    conversationList.querySelectorAll(".conversation-item").forEach(button => button.addEventListener("click", () => {
+        selectedConversation = button.dataset.email;
+        conversationList.querySelectorAll(".conversation-item").forEach(item => item.classList.toggle("active", item === button));
+        chatNote.textContent = `محادثة خاصة مع ${button.querySelector("strong").textContent}`;
+        loadMessages();
+    }));
+}
+
+async function loadConversations() {
+    if (!isAdmin) return;
+    try {
+        const response = await fetch("/api/chat/conversations");
+        if (!response.ok) throw new Error(await response.text());
+        const conversations = await response.json();
+        renderConversations(conversations);
+        if (!selectedConversation && conversations[0]) {
+            selectedConversation = conversations[0].email;
+            conversationList.querySelector(".conversation-item")?.click();
+        }
+    } catch (error) {
+        conversationList.innerHTML = `<p class="no">${escapeHtml(error.message || "تعذر تحميل المحادثات")}</p>`;
+    }
 }
 
 if (!currentUser?.email) {
-    const returnUrl = `${window.location.pathname}${window.location.search}`;
-    window.location.href = `signin.html?return=${encodeURIComponent(returnUrl)}`;
-}
+    window.location.href = "index.html?auth=login&return=/chat.html";
+} else {
+    document.getElementById("naMe").textContent = currentUser.name || "حسابي";
+    if (currentUser.avatar) document.getElementById("photo").src = currentUser.avatar;
+    document.getElementById("logout").addEventListener("click", async event => {
+        event.preventDefault();
+        await fetch("/logout", { method: "POST" });
+        localStorage.removeItem("currentUser");
+        window.location.href = "index.html";
+    });
 
-function showError(message) {
-    readerStatus.textContent = message;
-    readerStatus.className = "detail-status error";
-}
-
-async function loadReader() {
-    if (!bookId) {
-        showError("رابط الكتاب غير صحيح.");
-        return;
+    if (isAdmin) {
+        founderInbox.hidden = false;
+        roomButtons.forEach(button => button.hidden = true);
+        chatNote.textContent = "اختر عضوًا من القائمة لعرض رسائله والرد عليه.";
+        loadConversations();
     }
 
-    try {
-        const bookResponse = await fetch(`/api/books/${encodeURIComponent(bookId)}`);
-        if (!bookResponse.ok) throw new Error("الكتاب غير موجود.");
-        const book = await bookResponse.json();
-        readerTitle.textContent = book.title;
-        readerAuthor.textContent = `تأليف ${book.author}`;
-        document.title = `${book.title} | قارئ رفوف`;
+    roomButtons.forEach(button => button.addEventListener("click", () => {
+        if (isAdmin) return;
+        currentRoom = button.dataset.room;
+        roomButtons.forEach(item => {
+            const isActive = item === button;
+            item.classList.toggle("active", isActive);
+            item.setAttribute("aria-selected", String(isActive));
+        });
+        chatNote.textContent = currentRoom === "public"
+            ? "كل أعضاء رفوف المسجلين يستطيعون رؤية رسائل هذه الغرفة."
+            : "رسائلك هنا يراها أنت ومؤسس رفوف فقط.";
+        showStatus("");
+        loadMessages();
+    }));
 
-        if (!(book.hasPdf ?? Boolean(book.pdfFile))) {
-            showError("ملف القراءة غير مرفوع لهذا الكتاب حاليًا.");
-            return;
+    chatForm.addEventListener("submit", async event => {
+        event.preventDefault();
+        const text = chatText.value.trim();
+        if (!text) return;
+        showStatus("جارٍ إرسال الرسالة...");
+        try {
+            const response = await fetch("/api/chat/messages", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ room: currentRoom, text, recipientEmail: selectedConversation })
+            });
+            if (!response.ok) throw new Error(await response.text());
+            chatText.value = "";
+            showStatus("تم إرسال الرسالة.", "success");
+            await loadMessages();
+        } catch (error) {
+            showStatus(error.message || "تعذر إرسال الرسالة.", "error");
         }
+    });
 
-        const readResponse = await fetch(`/api/books/${encodeURIComponent(bookId)}/read`, { method: "POST" });
-        if (!readResponse.ok) throw new Error(await readResponse.text());
-
-        const accessUrl = `/api/books/${encodeURIComponent(bookId)}/access`;
-        const viewerUrl = /^https?:\/\//i.test(String(book.pdfFile || "")) ? normalizeGoogleDrivePdfUrl(book.pdfFile) : accessUrl;
-
-        readerDownload.href = `${accessUrl}?download=1`;
-        readerDownload.hidden = false;
-        readerFrame.src = viewerUrl;
-        readerFrameWrap.hidden = false;
-        readerControls.hidden = true;
-        readerStatus.hidden = true;
-        pageIndicator.textContent = "عرض الكتاب";
-    } catch (error) {
-        showError(error.message || "تعذر فتح الكتاب.");
-    }
+    loadMessages();
+    window.setInterval(() => {
+        loadMessages();
+        loadConversations();
+    }, 5000);
 }
-
-if (prevPageBtn) prevPageBtn.addEventListener("click", () => {
-    if (readerFrame?.contentWindow) readerFrame.contentWindow.history.back();
-});
-if (nextPageBtn) nextPageBtn.addEventListener("click", () => {
-    if (readerFrame?.contentWindow) readerFrame.contentWindow.history.forward();
-});
-if (zoomOutBtn) zoomOutBtn.addEventListener("click", () => { if (readerFrame) readerFrame.style.transform = "scale(0.9)"; });
-if (zoomInBtn) zoomInBtn.addEventListener("click", () => { if (readerFrame) readerFrame.style.transform = "scale(1.1)"; });
-
-loadReader();
