@@ -66,7 +66,7 @@ body.dark-mode .welcome { background: linear-gradient(120deg, #29453a, #3d3b2f);
 .categories { display: flex; gap: 8px; flex-wrap: wrap; }
 .category { border: 1px solid var(--border); border-radius: 20px; padding: 8px 14px; background: var(--surface); color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; }
 .category.active, .category:hover { border-color: var(--primary); background: var(--primary); color: #fff; }
-.chat-category-button { position: fixed; left: 22px; bottom: 22px; z-index: 30; border-color: var(--primary); background: var(--primary); color: #fff; box-shadow: 0 10px 25px rgba(49, 94, 80, .28); text-decoration: none; }
+.chat-category-button { position: fixed !important; display: inline-flex !important; visibility: visible !important; opacity: 1 !important; left: 22px; bottom: 22px; z-index: 100; align-items: center; justify-content: center; min-height: 42px; border: 1px solid var(--primary); border-radius: 20px; padding: 8px 14px; background: var(--primary); color: #fff !important; font: inherit; font-size: 12px; box-shadow: 0 10px 25px rgba(49, 94, 80, .28); text-decoration: none; }
 .chat-category-button:hover { background: var(--primary-dark); color: #fff; transform: translateY(-2px); }
 .first_videos { width: min(1120px, calc(100% - 40px)); display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 280px)); justify-content: start; gap: 18px; margin: 0 auto 55px; }
 .one_videos { padding: 10px; border: 1px solid var(--border); border-radius: 15px; background: var(--surface); box-shadow: var(--shadow); transition: transform .25s, box-shadow .25s; }
