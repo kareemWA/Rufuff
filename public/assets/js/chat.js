@@ -29,12 +29,23 @@ function renderMessages(messages) {
         messagesElement.innerHTML = '<p class="no">لا توجد رسائل بعد. كن أول من يبدأ الحديث.</p>';
         return;
     }
-    messagesElement.innerHTML = messages.map(message => `
-        <article class="chat-message${message.mine ? " mine" : ""}">
-            <strong>${escapeHtml(message.userName)}</strong>
-            <p>${escapeHtml(message.text)}</p>
-            <time>${new Date(message.createdAt).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" })}</time>
-        </article>`).join("");
+
+    messagesElement.innerHTML = messages.map(message => {
+        const avatarUrl = message.userAvatar || (message.mine ? currentUser?.avatar : null);
+        const avatarMarkup = avatarUrl
+            ? `<img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(message.userName || "مستخدم")}" class="chat-message-avatar">`
+            : `<span class="chat-message-avatar chat-message-avatar-fallback">${escapeHtml((message.userName || "م").charAt(0))}</span>`;
+
+        return `
+            <article class="chat-message${message.mine ? " mine" : ""}">
+                ${avatarMarkup}
+                <div class="chat-message-body">
+                    <strong>${escapeHtml(message.userName)}</strong>
+                    <p>${escapeHtml(message.text)}</p>
+                    <time>${new Date(message.createdAt).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" })}</time>
+                </div>
+            </article>`;
+    }).join("");
     messagesElement.scrollTop = messagesElement.scrollHeight;
 }
 

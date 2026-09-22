@@ -121,6 +121,7 @@ const chatMessageSchema = new mongoose.Schema({
     conversationEmail: { type: String, default: null },
     userEmail: { type: String, required: true },
     userName: { type: String, required: true },
+    userAvatar: { type: String, default: null },
     text: { type: String, required: true, trim: true, maxlength: 1000 }
 }, { timestamps: true });
 chatMessageSchema.index({ room: 1, createdAt: -1 });
@@ -489,6 +490,7 @@ app.get("/api/chat/messages", requireUser, async (req, res) => {
             conversationUserId: message.conversationUserId ? String(message.conversationUserId) : null,
             conversationEmail: message.conversationEmail || message.userEmail,
             userName: message.userName,
+            userAvatar: message.userAvatar || null,
             text: message.text,
             createdAt: message.createdAt,
             mine: normalizeEmail(message.userEmail) === normalizeEmail(req.currentUser.email)
@@ -514,11 +516,20 @@ app.post("/api/chat/messages", requireUser, async (req, res) => {
         if (room === "founder" && !conversationUser) return res.status(400).send("اختر محادثة لإرسال الرسالة");
         const conversationEmail = room === "founder" ? normalizeEmail(conversationUser.email) : null;
         const conversationUserId = room === "founder" ? conversationUser._id : null;
-        const message = await ChatMessage.create({ room, conversationUserId, conversationEmail, userEmail: normalizeEmail(req.currentUser.email), userName: req.currentUser.name, text });
+        const message = await ChatMessage.create({
+            room,
+            conversationUserId,
+            conversationEmail,
+            userEmail: normalizeEmail(req.currentUser.email),
+            userName: req.currentUser.name,
+            userAvatar: req.currentUser.photo || req.currentUser.avatar || null,
+            text
+        });
         res.status(201).json({
             id: String(message._id), room: message.room, conversationEmail: message.conversationEmail,
             conversationUserId: message.conversationUserId ? String(message.conversationUserId) : null,
             userName: message.userName,
+            userAvatar: message.userAvatar || null,
             text: message.text, createdAt: message.createdAt, mine: true
         });
     } catch (error) {

@@ -212,8 +212,11 @@ body.dark-mode .welcome { background: linear-gradient(120deg, #29453a, #3d3b2f);
 .conversation-item small { max-width: 540px; color: var(--muted); font-size: 10px; }
 .chat-note { margin: 0 0 16px; color: var(--muted); font-size: 12px; }
 .chat-messages { display: grid; gap: 12px; min-height: 320px; max-height: 520px; padding: 12px 8px 8px; overflow-y: auto; border: 1px solid rgba(49, 94, 80, .08); border-radius: 16px; background: linear-gradient(180deg, rgba(248,248,246,.92), rgba(240,244,238,.82)); }
-.chat-message { max-width: 78%; padding: 12px 14px; border: 1px solid rgba(49, 94, 80, .08); border-radius: 14px 14px 14px 4px; background: rgba(255,255,255,.8); box-shadow: 0 6px 14px rgba(49, 67, 54, .04); }
-.chat-message.mine { margin-right: auto; border-radius: 14px 14px 4px 14px; border-color: rgba(49, 94, 80, .18); background: linear-gradient(135deg, rgba(49, 94, 80, .12), rgba(49, 94, 80, .08)); }
+.chat-message { display: flex; align-items: flex-start; gap: 10px; max-width: 78%; padding: 12px 14px; border: 1px solid rgba(49, 94, 80, .08); border-radius: 14px 14px 14px 4px; background: rgba(255,255,255,.8); box-shadow: 0 6px 14px rgba(49, 67, 54, .04); }
+.chat-message.mine { flex-direction: row-reverse; margin-right: auto; border-radius: 14px 14px 4px 14px; border-color: rgba(49, 94, 80, .18); background: linear-gradient(135deg, rgba(49, 94, 80, .12), rgba(49, 94, 80, .08)); }
+.chat-message-avatar { display: grid; flex: 0 0 34px; place-items: center; width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background: var(--soft); color: var(--primary); font-size: 12px; font-weight: 700; }
+.chat-message-avatar-fallback { border: 1px solid rgba(49, 94, 80, .08); }
+.chat-message-body { display: grid; min-width: 0; }
 .chat-message strong { display: block; color: var(--primary); font-size: 12px; }
 .chat-message p { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.7; }
 .chat-message time { display: block; margin-top: 5px; color: var(--muted); font-size: 10px; }
