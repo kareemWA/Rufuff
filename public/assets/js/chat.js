@@ -9,6 +9,9 @@ const roomPicker = document.querySelector(".chat-cards");
 const chatHero = document.getElementById("chatHero");
 const founderInbox = document.getElementById("founderInbox");
 const conversationList = document.getElementById("conversationList");
+const imageViewer = document.getElementById("imageViewer");
+const imageViewerImage = document.getElementById("imageViewerImage");
+const imageViewerClose = document.getElementById("imageViewerClose");
 const isAdmin = currentUser?.role === "admin";
 const requestedRoom = new URLSearchParams(window.location.search).get("room");
 let currentRoom = "founder";
@@ -24,6 +27,22 @@ function showStatus(message, type = "") {
     chatStatus.className = `form-message ${type}`;
 }
 
+function openImageViewer(src, alt = "") {
+    if (!imageViewer || !imageViewerImage || !src) return;
+    imageViewerImage.src = src;
+    imageViewerImage.alt = alt;
+    imageViewer.classList.remove("hidden");
+    imageViewer.setAttribute("aria-hidden", "false");
+}
+
+function closeImageViewer() {
+    if (!imageViewer || !imageViewerImage) return;
+    imageViewer.classList.add("hidden");
+    imageViewer.setAttribute("aria-hidden", "true");
+    imageViewerImage.src = "";
+    imageViewerImage.alt = "عرض صورة كبيرة";
+}
+
 function renderMessages(messages) {
     if (!messages.length) {
         messagesElement.innerHTML = '<p class="no">لا توجد رسائل بعد. كن أول من يبدأ الحديث.</p>';
@@ -33,7 +52,7 @@ function renderMessages(messages) {
     messagesElement.innerHTML = messages.map(message => {
         const avatarUrl = message.userAvatar || (message.mine ? currentUser?.avatar : null);
         const avatarMarkup = avatarUrl
-            ? `<img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(message.userName || "مستخدم")}" class="chat-message-avatar">`
+            ? `<img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(message.userName || "مستخدم")}" class="chat-message-avatar" data-src="${escapeHtml(avatarUrl)}">`
             : `<span class="chat-message-avatar chat-message-avatar-fallback">${escapeHtml((message.userName || "م").charAt(0))}</span>`;
 
         return `
@@ -46,6 +65,12 @@ function renderMessages(messages) {
                 </div>
             </article>`;
     }).join("");
+
+    messagesElement.querySelectorAll(".chat-message-avatar[data-src]").forEach(image => {
+        image.style.cursor = "pointer";
+        image.addEventListener("click", () => openImageViewer(image.dataset.src, image.alt));
+    });
+
     messagesElement.scrollTop = messagesElement.scrollHeight;
 }
 
@@ -117,6 +142,16 @@ async function loadConversations() {
     } catch (error) {
         conversationList.innerHTML = `<p class="no">${escapeHtml(error.message || "تعذر تحميل المحادثات")}</p>`;
     }
+}
+
+if (imageViewerClose) {
+    imageViewerClose.addEventListener("click", closeImageViewer);
+}
+
+if (imageViewer) {
+    imageViewer.addEventListener("click", event => {
+        if (event.target === imageViewer) closeImageViewer();
+    });
 }
 
 if (!currentUser?.email) {
