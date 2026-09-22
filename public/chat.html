@@ -33,14 +33,14 @@
     </aside>
 
     <main class="chat-main">
-        <section class="chat-hero">
+        <section class="chat-hero" id="chatHero">
             <h1>دردشة رفوف</h1>
             <p>اختر مساحتك: تحدث مع مؤسس رفوف بشكل خاص أو شارك المجتمع أفكارك.</p>
         </section>
         <section class="chat-shell">
             <div class="chat-cards" role="tablist" aria-label="غرف الدردشة">
                 <button class="chat-card active" type="button" data-room="founder" role="tab" aria-selected="true">
-                    <img src="icon/f.png" alt="صورة مؤسس رفوف">
+                    <img src="icon/f.jpg" alt="صورة مؤسس رفوف">
                     <span class="chat-card-content">
                         <strong>دردشة خاصة مع مؤسس رفوف</strong>
                         <small>رسالتك تصل إلى المؤسس فقط</small>
@@ -48,29 +48,31 @@
                     <span class="premium-badge">Premium</span>
                 </button>
                 <button class="chat-card" type="button" data-room="public" role="tab" aria-selected="false">
-                    <span class="community-icon" aria-hidden="true"><img src="icon/c.png" alt="صورة المجتمع"></span>
+                    <span class="community-icon" aria-hidden="true"><img src="icon/c.jpg" alt="صورة المجتمع"></span>
                     <span class="chat-card-content">
                         <strong>دردشة المجتمع</strong>
                         <small>شارك أفكارك مع أعضاء رفوف</small>
                     </span>
                 </button>
             </div>
-            <section class="founder-inbox" id="founderInbox" hidden>
-                <div class="founder-inbox-heading">
-                    <h2>رسائل الأعضاء</h2>
-                    <span>اختر محادثة للرد</span>
-                </div>
-                <div class="conversation-list" id="conversationList"></div>
-            </section>
-            <p class="chat-note" id="chatNote">كل أعضاء رفوف المسجلين يستطيعون رؤية رسائل هذه الغرفة.</p>
-            <div class="chat-messages" id="chatMessages" aria-live="polite"><p class="no">المحادثه فارغه</p></div>
-            <form class="chat-form" id="chatForm">
-                <textarea id="chatText" maxlength="1000" placeholder="اكتب رسالتك..." required></textarea>
-                <button class="btn" type="submit">إرسال الرسالة</button>
-            </form>
-            <p class="form-message" id="chatStatus" role="status" aria-live="polite"></p>
+            <div class="chat-content">
+                <section class="founder-inbox" id="founderInbox" hidden>
+                    <div class="founder-inbox-heading">
+                        <h2>رسائل الأعضاء</h2>
+                        <span>اختر محادثة للرد</span>
+                    </div>
+                    <div class="conversation-list" id="conversationList"></div>
+                </section>
+                <p class="chat-note" id="chatNote">كل أعضاء رفوف المسجلين يستطيعون رؤية رسائل هذه الغرفة.</p>
+                <div class="chat-messages" id="chatMessages" aria-live="polite"><p class="no">جارٍ تحميل الرسائل...</p></div>
+                <form class="chat-form" id="chatForm" action="javascript:void(0)">
+                    <textarea id="chatText" maxlength="1000" placeholder="اكتب رسالتك..." required></textarea>
+                    <button class="btn" type="submit">إرسال الرسالة</button>
+                </form>
+                <p class="form-message" id="chatStatus" role="status" aria-live="polite"></p>
+            </div>
         </section>
     </main>
-    <script src="assets/js/chat.js?v=3"></script>
+    <script src="assets/js/chat.js?v=4"></script>
 </body>
 </html>
