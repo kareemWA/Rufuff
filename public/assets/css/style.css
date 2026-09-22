@@ -58,7 +58,7 @@ body.dark-mode .welcome { background: linear-gradient(120deg, #29453a, #3d3b2f);
 .list a::first-letter, .list_bottom a::first-letter { color: var(--accent); font-size: 17px; }
 
 @media (min-width: 901px) {
-    .welcome, .section-heading, .first_videos { width: min(1080px, calc(100% - 300px)); margin-left: 34px; margin-right: 250px; }
+    .welcome, .section-heading, .chat-category-view, .first_videos { width: min(1080px, calc(100% - 300px)); margin-left: 34px; margin-right: 250px; }
 }
 
 .section-heading { width: min(1120px, calc(100% - 40px)); margin: 42px auto 18px; display: flex; align-items: end; justify-content: space-between; gap: 16px; }
@@ -73,7 +73,7 @@ body.dark-mode .welcome { background: linear-gradient(120deg, #29453a, #3d3b2f);
 .chat-category-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
 .chat-category-heading h2 { margin: 0 0 5px; font-family: Georgia, serif; font-size: 27px; font-weight: 400; }
 .chat-category-heading p { margin: 0; color: var(--muted); font-size: 13px; }
-.chat-category-view .chat-cards { margin-bottom: 0; }
+.chat-category-view .chat-cards { grid-template-columns: repeat(auto-fill, minmax(230px, 280px)); justify-content: start; margin-bottom: 0; }
 .chat-category-view .chat-card { cursor: default; }
 .chat-category-view .chat-card:hover { transform: translateY(-3px); }
 .chat-card-button { display: block; margin: 10px 4px 2px; text-align: center; }
