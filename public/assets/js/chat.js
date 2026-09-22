@@ -38,6 +38,22 @@ function renderMessages(messages) {
     messagesElement.scrollTop = messagesElement.scrollHeight;
 }
 
+function activateRoom(roomName) {
+    currentRoom = roomName;
+    roomButtons.forEach(button => {
+        const isActive = button.dataset.room === roomName;
+        button.classList.toggle("active", isActive);
+        button.setAttribute("aria-selected", String(isActive));
+    });
+    if (currentRoom === "public") {
+        chatNote.textContent = "كل أعضاء رفوف المسجلين يستطيعون رؤية رسائل هذه الغرفة.";
+    } else {
+        chatNote.textContent = "رسائلك هنا يراها أنت ومؤسس رفوف فقط.";
+    }
+    showStatus("");
+    loadMessages();
+}
+
 function hasValidConversationId(value) {
     return typeof value === "string" && value.trim() && /^[a-fA-F0-9]{24}$/.test(value.trim());
 }
@@ -116,24 +132,12 @@ if (!currentUser?.email) {
         chatHero.querySelector("p").textContent = currentRoom === "founder"
             ? "رسائلك هنا يراها أنت ومؤسس رفوف فقط."
             : "شارك أفكارك مع أعضاء رفوف في مساحة المجتمع.";
-        chatNote.textContent = currentRoom === "public"
-            ? "كل أعضاء رفوف المسجلين يستطيعون رؤية رسائل هذه الغرفة."
-            : "رسائلك هنا يراها أنت ومؤسس رفوف فقط.";
+        activateRoom(currentRoom);
     }
 
     roomButtons.forEach(button => button.addEventListener("click", () => {
         if (isAdmin) return;
-        currentRoom = button.dataset.room;
-        roomButtons.forEach(item => {
-            const isActive = item === button;
-            item.classList.toggle("active", isActive);
-            item.setAttribute("aria-selected", String(isActive));
-        });
-        chatNote.textContent = currentRoom === "public"
-            ? "كل أعضاء رفوف المسجلين يستطيعون رؤية رسائل هذه الغرفة."
-            : "رسائلك هنا يراها أنت ومؤسس رفوف فقط.";
-        showStatus("");
-        loadMessages();
+        activateRoom(button.dataset.room);
     }));
 
     chatForm.addEventListener("submit", async event => {
