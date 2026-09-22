@@ -465,14 +465,21 @@ app.get("/api/chat/messages", requireUser, async (req, res) => {
         const isAdmin = req.currentUser.role === "admin" || isConfiguredAdminEmail(req.currentUser.email);
         const filter = { room };
         if (room === "founder") {
-            const conversationId = isAdmin && req.query.conversationId ? String(req.query.conversationId) : String(req.currentUser._id);
+            const rawConversationId = isAdmin && req.query.conversationId ? String(req.query.conversationId).trim() : String(req.currentUser._id);
+            const conversationId = mongoose.Types.ObjectId.isValid(rawConversationId) ? rawConversationId : null;
             const conversationEmail = isAdmin && req.query.conversation ? normalizeEmail(req.query.conversation) : normalizeEmail(req.currentUser.email);
-            filter.$or = [{ conversationUserId: conversationId }];
+            const conversationMatches = [];
+            if (conversationId) {
+                conversationMatches.push({ conversationUserId: conversationId });
+            }
             if (conversationEmail) {
-                filter.$or.push(
+                conversationMatches.push(
                     { conversationEmail, conversationUserId: null },
                     { conversationEmail: { $exists: false }, userEmail: conversationEmail }
                 );
+            }
+            if (conversationMatches.length) {
+                filter.$or = conversationMatches;
             }
         }
         const messages = await ChatMessage.find(filter).sort({ createdAt: -1 }).limit(100).lean();
@@ -487,6 +494,7 @@ app.get("/api/chat/messages", requireUser, async (req, res) => {
             mine: normalizeEmail(message.userEmail) === normalizeEmail(req.currentUser.email)
         })));
     } catch (error) {
+        console.error("Chat messages load error:", error.message);
         res.status(500).send("تعذر تحميل رسائل الدردشة");
     }
 });

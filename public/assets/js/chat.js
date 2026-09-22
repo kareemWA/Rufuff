@@ -38,10 +38,15 @@ function renderMessages(messages) {
     messagesElement.scrollTop = messagesElement.scrollHeight;
 }
 
+function hasValidConversationId(value) {
+    return typeof value === "string" && value.trim() && /^[a-fA-F0-9]{24}$/.test(value.trim());
+}
+
 async function loadMessages() {
     try {
+        const safeConversationId = hasValidConversationId(selectedConversation) ? selectedConversation : "";
         const conversationQuery = currentRoom === "founder" && selectedConversation
-            ? `&conversationId=${encodeURIComponent(selectedConversation)}&conversation=${encodeURIComponent(selectedConversationEmail)}`
+            ? `&conversationId=${encodeURIComponent(safeConversationId)}&conversation=${encodeURIComponent(selectedConversationEmail)}`
             : "";
         const response = await fetch(`/api/chat/messages?room=${currentRoom}${conversationQuery}`);
         if (!response.ok) throw new Error(await response.text());
