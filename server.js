@@ -373,10 +373,15 @@ async function getCurrentUser(req) {
 }
 
 async function requireUser(req, res, next) {
-    const user = await getCurrentUser(req);
-    if (!user) return res.status(401).send("يجب تسجيل الدخول أولًا");
-    req.currentUser = user;
-    next();
+    try {
+        const user = await getCurrentUser(req);
+        if (!user) return res.status(401).send("يجب تسجيل الدخول أولًا");
+        req.currentUser = user;
+        next();
+    } catch (error) {
+        console.error("Authenticated request database error:", error.message);
+        res.status(503).send("قاعدة البيانات غير متاحة حاليًا. حاول مرة أخرى بعد قليل.");
+    }
 }
 
 async function requireAdmin(req, res, next) {
@@ -1617,7 +1622,13 @@ globalThis.__rufuffDatabaseState = databaseState;
 
 async function connectDatabase() {
     if (mongoose.connection.readyState === 1) {
-        return mongoose.connection;
+        try {
+            await mongoose.connection.db.admin().ping();
+            return mongoose.connection;
+        } catch {
+            databaseState.promise = null;
+            await mongoose.disconnect().catch(() => {});
+        }
     }
 
     if (mongoose.connection.readyState === 0) {
