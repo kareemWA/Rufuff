@@ -298,7 +298,7 @@ if (!currentUser?.email) {
             showStatus("تم إرسال الرسالة.", "success");
             await loadMessages();
         } catch (error) {
-            showStatus(error.message || "تعذر إرسال الرسالة.", "error");
+            showStatus(error.message || "تعذر إرسال الرسالة. تأكد من إعدادات التخزين.", "error");
         }
     });
 

@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="assets/css/sidebar-fix.css?v=1">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="chat-page">
     <header class="header">
         <div class="brand">
             <a href="index.html" class="site-brand" aria-label="رفوف"><img src="icon/icn.png" alt="شعار رفوف"><span>رفوف</span></a>
@@ -67,7 +67,7 @@
                 <div class="chat-messages" id="chatMessages" aria-live="polite"><p class="no">جارٍ تحميل الرسائل...</p></div>
                 <form class="chat-form" id="chatForm" action="javascript:void(0)" novalidate>
                     <textarea id="chatText" maxlength="1000" placeholder="اكتب رسالتك أو أرفق صورة..."></textarea>
-                    <label class="chat-image-button" for="chatImage" title="مشاركة صورة" aria-label="مشاركة صورة">📷</label>
+                    <label class="chat-image-button" for="chatImage" title="مشاركة صورة" aria-label="مشاركة صورة">صوره</label>
                     <input id="chatImage" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
                     <button class="btn" type="submit">إرسال الرسالة</button>
                 </form>
@@ -83,6 +83,6 @@
         <button class="image-viewer-close" id="imageViewerClose" type="button" aria-label="إغلاق">×</button>
         <img id="imageViewerImage" src="" alt="عرض صورة كبيرة">
     </div>
-    <script src="assets/js/chat.js?v=8"></script>
+    <script src="assets/js/chat.js?v=9"></script>
 </body>
 </html>

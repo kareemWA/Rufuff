@@ -128,7 +128,8 @@ const chatMessageSchema = new mongoose.Schema({
     userEmail: { type: String, required: true },
     userName: { type: String, required: true },
     userAvatar: { type: String, default: null },
-    text: { type: String, required: true, trim: true, maxlength: 1000 }
+    text: { type: String, default: "", trim: true, maxlength: 1000 },
+    imageUrl: { type: String, default: null }
 }, { timestamps: true });
 chatMessageSchema.index({ room: 1, createdAt: -1 });
 chatMessageSchema.index({ room: 1, conversationUserId: 1, createdAt: -1 });
@@ -1613,26 +1614,24 @@ globalThis.__rufuffDatabaseState = databaseState;
 async function connectDatabase() {
     if (!databaseState.promise) {
         databaseState.promise = mongoose.connect(MONGODB_URI, {
-            serverSelectionTimeoutMS: 5000,
+            serverSelectionTimeoutMS: 4000,
+            connectTimeoutMS: 4000,
+            socketTimeoutMS: 10000,
             maxPoolSize: 10,
             minPoolSize: 0,
             maxIdleTimeMS: 30000
-        }).then(async () => {
+        }).then(() => {
             console.log("MongoDB connected: myapp");
-            await Payment.collection.dropIndex("paymobOrderId_1").catch(() => {});
-
-            const configuredAdminEmail = normalizeEmail(process.env.ADMIN_EMAIL);
-            if (configuredAdminEmail) {
-                await User.updateMany(
-                    { email: configuredAdminEmail },
-                    { $set: { role: "admin" } },
-                    { runValidators: true }
-                );
-            }
-
-            await ensureDefaultAdminUser();
-            await ensureDefaultCategories();
-            await createBooksCollection();
+            void Promise.allSettled([
+                Payment.collection.dropIndex("paymobOrderId_1"),
+                ensureDefaultAdminUser(),
+                ensureDefaultCategories(),
+                createBooksCollection()
+            ]).then(results => {
+                const failedTasks = results.filter(result => result.status === "rejected");
+                if (failedTasks.length) console.error("Database maintenance failed:", failedTasks.map(result => result.reason?.message || result.reason));
+            });
+            return mongoose.connection;
         }).catch(error => {
             databaseState.promise = null;
             throw error;
