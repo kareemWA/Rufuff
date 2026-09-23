@@ -68,6 +68,7 @@ function renderMessages(messages) {
     }
 
     messagesElement.innerHTML = messages.map(message => {
+        const messageText = typeof message.text === "string" ? message.text : "";
         const avatarUrl = message.userAvatar || (message.mine ? currentUser?.avatar : null);
         const avatarMarkup = avatarUrl
             ? `<img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(message.userName || "مستخدم")}" class="chat-message-avatar" data-src="${escapeHtml(avatarUrl)}">`
@@ -78,7 +79,7 @@ function renderMessages(messages) {
                 <div class="chat-message-actions">
                     <button class="chat-message-menu-button" type="button" aria-label="خيارات الرسالة" aria-expanded="false">⋮</button>
                     <div class="chat-message-menu" hidden>
-                        <button class="chat-message-copy" type="button" data-copy-value="${escapeHtml(message.text || message.imageUrl || "")}">نسخ</button>
+                        <button class="chat-message-copy" type="button" data-copy-value="${escapeHtml(messageText || message.imageUrl || "")}">نسخ</button>
                         ${message.mine ? `<button class="chat-message-delete" type="button" data-message-id="${escapeHtml(message.id)}">حذف الرسالة</button>` : ""}
                     </div>
                 </div>
@@ -86,7 +87,7 @@ function renderMessages(messages) {
                 <div class="chat-message-body">
                     <strong>${escapeHtml(message.userName)}</strong>
                     ${message.imageUrl ? `<img class="chat-message-image" src="${escapeHtml(message.imageUrl)}" alt="صورة مرفقة" data-src="${escapeHtml(message.imageUrl)}">` : ""}
-                    ${message.text ? `<p class="${message.text.length > 240 ? "is-collapsed" : ""}">${linkifyText(message.text)}</p>${message.text.length > 240 ? '<button class="chat-message-more" type="button">مشاهدة باقي الرسالة</button>' : ""}` : ""}
+                    ${messageText ? `<p class="${messageText.length > 240 ? "is-collapsed" : ""}">${linkifyText(messageText)}</p>${messageText.length > 240 ? '<button class="chat-message-more" type="button">مشاهدة باقي الرسالة</button>' : ""}` : ""}
                     <time>${new Date(message.createdAt).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" })}</time>
                 </div>
             </article>`;

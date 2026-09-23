@@ -507,21 +507,27 @@ app.get("/api/chat/messages", requireUser, async (req, res) => {
                 filter.$or = conversationMatches;
             }
         }
-        const messages = await ChatMessage.find(filter).sort({ createdAt: -1 }).limit(100).lean();
-        res.json(messages.reverse().map(message => ({
+        let messages;
+        try {
+            messages = await ChatMessage.find(filter).sort({ createdAt: -1 }).limit(100).lean();
+        } catch (error) {
+            console.error("Chat messages sorted query error:", error);
+            messages = await ChatMessage.find(filter).limit(100).lean();
+        }
+        res.json(messages.sort((first, second) => new Date(first.createdAt || 0) - new Date(second.createdAt || 0)).map(message => ({
             id: String(message._id),
             room: message.room,
             conversationUserId: message.conversationUserId ? String(message.conversationUserId) : null,
             conversationEmail: message.conversationEmail || message.userEmail,
             userName: message.userName,
             userAvatar: message.userAvatar || null,
-            text: message.text,
+            text: typeof message.text === "string" ? message.text : "",
             imageUrl: message.imageUrl || null,
-            createdAt: message.createdAt,
+            createdAt: message.createdAt || new Date(0),
             mine: normalizeEmail(message.userEmail) === normalizeEmail(req.currentUser.email)
         })));
     } catch (error) {
-        console.error("Chat messages load error:", error.message);
+        console.error("Chat messages load error:", error);
         res.status(500).send("تعذر تحميل رسائل الدردشة");
     }
 });
