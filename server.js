@@ -511,8 +511,11 @@ app.get("/api/chat/messages", requireUser, async (req, res) => {
         try {
             messages = await ChatMessage.find(filter).sort({ createdAt: -1 }).limit(100).lean();
         } catch (error) {
-            console.error("Chat messages sorted query error:", error);
-            messages = await ChatMessage.find(filter).limit(100).lean();
+            console.error("Chat messages query error:", error);
+            databaseState.promise = null;
+            await mongoose.disconnect().catch(() => {});
+            await connectDatabase();
+            messages = await ChatMessage.find(filter).sort({ createdAt: -1 }).limit(100).lean();
         }
         res.json(messages.sort((first, second) => new Date(first.createdAt || 0) - new Date(second.createdAt || 0)).map(message => ({
             id: String(message._id),
