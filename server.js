@@ -1636,7 +1636,13 @@ globalThis.__rufuffDatabaseState = databaseState;
 
 async function connectDatabase() {
     if (mongoose.connection.readyState === 1) {
-        return mongoose.connection;
+        try {
+            await mongoose.connection.db.admin().ping({ maxTimeMS: 3000 });
+            return mongoose.connection;
+        } catch {
+            databaseState.promise = null;
+            await mongoose.disconnect().catch(() => {});
+        }
     }
 
     if (mongoose.connection.readyState === 0) {
