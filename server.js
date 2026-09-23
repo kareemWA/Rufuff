@@ -385,18 +385,23 @@ async function requireUser(req, res, next) {
 }
 
 async function requireAdmin(req, res, next) {
-    await requireUser(req, res, async () => {
-        if (req.currentUser.role !== "admin" && !isConfiguredAdminEmail(req.currentUser.email)) {
+    try {
+        const user = await getCurrentUser(req);
+        if (!user) return res.status(401).send("يجب تسجيل الدخول أولًا");
+        if (user.role !== "admin" && !isConfiguredAdminEmail(user.email)) {
             return res.status(403).send("لا تملك صلاحية الإدارة");
         }
 
-        if (isConfiguredAdminEmail(req.currentUser.email) && req.currentUser.role !== "admin") {
-            await User.updateOne({ _id: req.currentUser._id }, { $set: { role: "admin" } });
-            req.currentUser.role = "admin";
+        if (isConfiguredAdminEmail(user.email) && user.role !== "admin") {
+            await User.updateOne({ _id: user._id }, { $set: { role: "admin" } });
+            user.role = "admin";
         }
-
+        req.currentUser = user;
         next();
-    });
+    } catch (error) {
+        console.error("Admin authentication database error:", error);
+        res.status(503).send("قاعدة البيانات غير متاحة حاليًا. حاول مرة أخرى بعد قليل.");
+    }
 }
 
 function readUsers() {
@@ -751,7 +756,14 @@ app.get("/api/admin/users", requireAdmin, async (req, res) => {
         const users = await User.find().sort({ createdAt: -1 }).limit(100).lean();
         res.json(users.map(publicUser));
     } catch (error) {
-        res.status(500).send("تعذر تحميل المستخدمين");
+        console.error("Admin users query error:", error);
+        const isDatabaseNetworkError = /Mongo(Network|ServerSelection|Topology|Pool)/i.test(error?.name || "")
+            || /timed out|topology is closed|connection pool/i.test(error?.message || "");
+        res.status(isDatabaseNetworkError ? 503 : 500).send(
+            isDatabaseNetworkError
+                ? "قاعدة البيانات غير متاحة حاليًا. حاول مرة أخرى بعد قليل."
+                : "تعذر تحميل المستخدمين"
+        );
     }
 });
 
