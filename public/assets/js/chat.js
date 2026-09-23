@@ -78,7 +78,8 @@ function renderMessages(messages) {
                 <div class="chat-message-actions">
                     <button class="chat-message-menu-button" type="button" aria-label="خيارات الرسالة" aria-expanded="false">⋮</button>
                     <div class="chat-message-menu" hidden>
-                        ${message.mine ? `<button class="chat-message-delete" type="button" data-message-id="${escapeHtml(message.id)}">حذف الرسالة</button>` : '<span>لا توجد خيارات</span>'}
+                        <button class="chat-message-copy" type="button" data-copy-value="${escapeHtml(message.text || message.imageUrl || "")}">نسخ</button>
+                        ${message.mine ? `<button class="chat-message-delete" type="button" data-message-id="${escapeHtml(message.id)}">حذف الرسالة</button>` : ""}
                     </div>
                 </div>
                 ${avatarMarkup}
@@ -127,6 +128,18 @@ function renderMessages(messages) {
                 button.disabled = false;
                 showStatus(error.message || "تعذر حذف الرسالة.", "error");
             }
+        });
+    });
+    messagesElement.querySelectorAll(".chat-message-copy").forEach(button => {
+        button.addEventListener("click", async () => {
+            const value = button.dataset.copyValue || "";
+            try {
+                await navigator.clipboard.writeText(value);
+                showStatus("تم نسخ الرسالة.", "success");
+            } catch {
+                showStatus("تعذر نسخ الرسالة.", "error");
+            }
+            button.closest(".chat-message-menu").hidden = true;
         });
     });
 
