@@ -1652,6 +1652,18 @@ async function connectDatabase() {
         return mongoose.connection;
     }
 
+    if (databaseState.promise) {
+        return databaseState.promise;
+    }
+
+    if (mongoose.connection.readyState === 2) {
+        databaseState.promise = mongoose.connection.asPromise().catch(error => {
+            databaseState.promise = null;
+            throw error;
+        });
+        return databaseState.promise;
+    }
+
     if (mongoose.connection.readyState === 0) {
         databaseState.promise = null;
     }
