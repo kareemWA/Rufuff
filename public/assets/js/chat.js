@@ -4,6 +4,9 @@ const chatForm = document.getElementById("chatForm");
 const chatText = document.getElementById("chatText");
 const chatStatus = document.getElementById("chatStatus");
 const chatImage = document.getElementById("chatImage");
+const chatImagePreview = document.getElementById("chatImagePreview");
+const chatImagePreviewImage = document.getElementById("chatImagePreviewImage");
+const chatImageRemove = document.getElementById("chatImageRemove");
 const chatNote = document.getElementById("chatNote");
 const roomButtons = Array.from(document.querySelectorAll(".chat-card"));
 const roomPicker = document.querySelector(".chat-cards");
@@ -50,6 +53,12 @@ function closeImageViewer() {
     imageViewer.setAttribute("aria-hidden", "true");
     imageViewerImage.src = "";
     imageViewerImage.alt = "عرض صورة كبيرة";
+}
+
+function clearSelectedImage() {
+    chatImage.value = "";
+    chatImagePreview.hidden = true;
+    chatImagePreviewImage.removeAttribute("src");
 }
 
 function renderMessages(messages) {
@@ -174,6 +183,21 @@ if (imageViewer) {
     });
 }
 
+chatImage.addEventListener("change", () => {
+    const file = chatImage.files[0];
+    if (!file) return clearSelectedImage();
+    if (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) {
+        clearSelectedImage();
+        showStatus("اختر صورة صالحة لا تتجاوز 5 ميجابايت.", "error");
+        return;
+    }
+    chatImagePreviewImage.src = URL.createObjectURL(file);
+    chatImagePreview.hidden = false;
+    showStatus("تم اختيار الصورة. اضغط إرسال الرسالة لنشرها.");
+});
+
+chatImageRemove.addEventListener("click", clearSelectedImage);
+
 if (!currentUser?.email) {
     window.location.href = "index.html?auth=login&return=/chat.html";
 } else {
@@ -227,7 +251,7 @@ if (!currentUser?.email) {
             });
             if (!response.ok) throw new Error(await response.text());
             chatText.value = "";
-            chatImage.value = "";
+            clearSelectedImage();
             showStatus("تم إرسال الرسالة.", "success");
             await loadMessages();
         } catch (error) {
