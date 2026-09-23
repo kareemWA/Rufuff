@@ -476,10 +476,13 @@ app.get("/api/me", requireUser, (req, res) => {
     res.json(publicUser(req.currentUser));
 });
 
-app.get("/api/chat/messages", requireUser, async (req, res) => {
+app.get("/api/chat/messages", async (req, res, next) => {
+    if (req.query.room === "public") return next();
+    return requireUser(req, res, next);
+}, async (req, res) => {
     try {
         const room = req.query.room === "founder" ? "founder" : "public";
-        const isAdmin = req.currentUser.role === "admin" || isConfiguredAdminEmail(req.currentUser.email);
+        const isAdmin = req.currentUser && (req.currentUser.role === "admin" || isConfiguredAdminEmail(req.currentUser.email));
         const filter = { room };
         if (room === "founder") {
             const rawConversationId = isAdmin && req.query.conversationId ? String(req.query.conversationId).trim() : String(req.currentUser._id);
@@ -522,7 +525,7 @@ app.get("/api/chat/messages", requireUser, async (req, res) => {
             text: typeof message.text === "string" ? message.text : "",
             imageUrl: message.imageUrl || null,
             createdAt: message.createdAt || new Date(0),
-            mine: normalizeEmail(message.userEmail) === normalizeEmail(req.currentUser.email)
+            mine: Boolean(req.currentUser && normalizeEmail(message.userEmail) === normalizeEmail(req.currentUser.email))
         })));
     } catch (error) {
         console.error("Chat messages load error:", error);
