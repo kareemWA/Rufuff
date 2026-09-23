@@ -5,7 +5,11 @@ module.exports = async (request, response) => {
         await connectDatabase();
         return app(request, response);
     } catch (error) {
-        console.error("Database connection failed:", error.message);
+        console.error("Database connection failed:", {
+            name: error?.name || "Error",
+            code: error?.code || "UNKNOWN",
+            message: error?.message || "Unknown database error"
+        });
         return response.status(503).send("قاعدة البيانات غير متاحة حاليًا. حاول مرة أخرى بعد قليل.");
     }
 };

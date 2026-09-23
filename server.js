@@ -50,6 +50,10 @@ if (process.env.DNS_SERVERS) {
     dns.setServers(process.env.DNS_SERVERS.split(",").map(server => server.trim()).filter(Boolean));
 }
 
+if (process.env.NODE_ENV === "production" && !process.env.MONGODB_URI) {
+    throw new Error("MONGODB_URI is required in production");
+}
+
 if (process.env.NODE_ENV === "production" && (!SESSION_SECRET || SESSION_SECRET.length < 32)) {
     throw new Error("SESSION_SECRET must be at least 32 characters in production");
 }
