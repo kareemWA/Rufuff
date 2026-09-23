@@ -1616,6 +1616,14 @@ const databaseState = globalThis.__rufuffDatabaseState || { promise: null };
 globalThis.__rufuffDatabaseState = databaseState;
 
 async function connectDatabase() {
+    if (mongoose.connection.readyState === 1) {
+        return mongoose.connection;
+    }
+
+    if (mongoose.connection.readyState === 0) {
+        databaseState.promise = null;
+    }
+
     if (!databaseState.promise) {
         databaseState.promise = mongoose.connect(MONGODB_URI, {
             serverSelectionTimeoutMS: 4000,
