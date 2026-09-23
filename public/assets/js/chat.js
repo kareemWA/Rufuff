@@ -75,6 +75,12 @@ function renderMessages(messages) {
 
         return `
             <article class="chat-message${message.mine ? " mine" : ""}">
+                <div class="chat-message-actions">
+                    <button class="chat-message-menu-button" type="button" aria-label="خيارات الرسالة" aria-expanded="false">⋮</button>
+                    <div class="chat-message-menu" hidden>
+                        ${message.mine ? `<button class="chat-message-delete" type="button" data-message-id="${escapeHtml(message.id)}">حذف الرسالة</button>` : '<span>لا توجد خيارات</span>'}
+                    </div>
+                </div>
                 ${avatarMarkup}
                 <div class="chat-message-body">
                     <strong>${escapeHtml(message.userName)}</strong>
@@ -97,6 +103,30 @@ function renderMessages(messages) {
             const text = button.previousElementSibling;
             text.classList.remove("is-collapsed");
             button.remove();
+        });
+    });
+    messagesElement.querySelectorAll(".chat-message-menu-button").forEach(button => {
+        button.addEventListener("click", () => {
+            const menu = button.nextElementSibling;
+            const willOpen = menu.hidden;
+            messagesElement.querySelectorAll(".chat-message-menu").forEach(item => { item.hidden = true; });
+            messagesElement.querySelectorAll(".chat-message-menu-button").forEach(item => item.setAttribute("aria-expanded", "false"));
+            menu.hidden = !willOpen;
+            button.setAttribute("aria-expanded", String(willOpen));
+        });
+    });
+    messagesElement.querySelectorAll(".chat-message-delete").forEach(button => {
+        button.addEventListener("click", async () => {
+            if (!window.confirm("هل تريد حذف هذه الرسالة؟")) return;
+            button.disabled = true;
+            try {
+                const response = await fetch(`/api/chat/messages/${encodeURIComponent(button.dataset.messageId)}`, { method: "DELETE" });
+                if (!response.ok) throw new Error(await response.text());
+                await loadMessages();
+            } catch (error) {
+                button.disabled = false;
+                showStatus(error.message || "تعذر حذف الرسالة.", "error");
+            }
         });
     });
 

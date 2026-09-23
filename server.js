@@ -549,6 +549,24 @@ app.post("/api/chat/messages", requireUser, async (req, res) => {
     }
 });
 
+app.delete("/api/chat/messages/:messageId", requireUser, async (req, res) => {
+    try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.messageId)) {
+            return res.status(400).send("معرّف الرسالة غير صالح");
+        }
+        const message = await ChatMessage.findOneAndDelete({
+            _id: req.params.messageId,
+            userEmail: normalizeEmail(req.currentUser.email)
+        }).lean();
+        if (!message) return res.status(404).send("لا يمكنك حذف هذه الرسالة");
+        if (message.imageUrl) await deleteFromObjectStorage(message.imageUrl).catch(() => {});
+        res.status(204).end();
+    } catch (error) {
+        console.error("Chat message delete error:", error.message);
+        res.status(500).send("تعذر حذف الرسالة");
+    }
+});
+
 app.post("/api/chat/uploads", requireUser, (req, res, next) => {
     chatUpload.single("image")(req, res, error => {
         if (error) return res.status(400).send(error.code === "LIMIT_FILE_SIZE" ? "حجم الصورة يجب ألا يتجاوز 5 ميجابايت" : "اختر صورة بصيغة صحيحة");
