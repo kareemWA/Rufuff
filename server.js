@@ -374,15 +374,7 @@ async function getCurrentUser(req) {
 
 async function requireUser(req, res, next) {
     try {
-        let user;
-        try {
-            user = await getCurrentUser(req);
-        } catch (error) {
-            databaseState.promise = null;
-            await mongoose.disconnect().catch(() => {});
-            await connectDatabase();
-            user = await getCurrentUser(req);
-        }
+        const user = await getCurrentUser(req);
         if (!user) return res.status(401).send("يجب تسجيل الدخول أولًا");
         req.currentUser = user;
         next();
@@ -512,10 +504,13 @@ app.get("/api/chat/messages", requireUser, async (req, res) => {
             messages = await ChatMessage.find(filter).sort({ createdAt: -1 }).limit(100).lean();
         } catch (error) {
             console.error("Chat messages query error:", error);
-            databaseState.promise = null;
-            await mongoose.disconnect().catch(() => {});
-            await connectDatabase();
-            messages = await ChatMessage.find(filter).sort({ createdAt: -1 }).limit(100).lean();
+            const isDatabaseNetworkError = /Mongo(Network|ServerSelection|Topology|Pool)/i.test(error?.name || "")
+                || /timed out|topology is closed|connection pool/i.test(error?.message || "");
+            return res.status(isDatabaseNetworkError ? 503 : 500).send(
+                isDatabaseNetworkError
+                    ? "قاعدة البيانات غير متاحة حاليًا. تحقق من اتصال MongoDB ثم حاول مرة أخرى."
+                    : "تعذر تحميل رسائل الدردشة"
+            );
         }
         res.json(messages.sort((first, second) => new Date(first.createdAt || 0) - new Date(second.createdAt || 0)).map(message => ({
             id: String(message._id),
@@ -1639,13 +1634,7 @@ globalThis.__rufuffDatabaseState = databaseState;
 
 async function connectDatabase() {
     if (mongoose.connection.readyState === 1) {
-        try {
-            await mongoose.connection.db.admin().ping({ maxTimeMS: 3000 });
-            return mongoose.connection;
-        } catch {
-            databaseState.promise = null;
-            await mongoose.disconnect().catch(() => {});
-        }
+        return mongoose.connection;
     }
 
     if (mongoose.connection.readyState === 0) {
