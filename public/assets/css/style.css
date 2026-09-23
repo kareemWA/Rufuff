@@ -43,7 +43,7 @@ body.dark-mode { --bg: #1d2421; --surface: #26312c; --soft: #334139; --text: #f4
 .welcome { position: relative; width: min(1120px, calc(100% - 40px)); margin: 40px auto 0; padding: clamp(30px, 6vw, 66px); overflow: hidden; border: 1px solid #ded4c3; border-radius: 24px; background: linear-gradient(120deg, #e8eee7, #fbf5e9); }
 body.dark-mode .welcome { background: linear-gradient(120deg, #29453a, #3d3b2f); border-color: var(--border); }
 .welcome::after { content: "</>"; position: absolute; left: 8%; bottom: -42px; color: rgba(200, 135, 75, .18); font: 180px Georgia, serif; }
-.welcome h1 { position: relative; z-index: 1; max-width: 580px; margin: 0 0 12px; font-family: Georgia, serif; font-size: clamp(29px, 5vw, 48px); font-weight: 400; }
+.welcome h1 { position: relative; z-index: 1; max-width: 580px; margin: 0 0 12px; color: var(--primary); font-family: "Cairo", sans-serif; font-size: clamp(29px, 5vw, 48px); font-weight: 800; line-height: 1.35; text-shadow: 0 4px 16px rgba(49, 94, 80, .12); }
 .welcome p { position: relative; z-index: 1; max-width: 500px; margin: 0; color: var(--muted); font-size: 16px; }
 .welcome .shop-note { display: inline-block; margin-top: 24px; color: var(--primary); font-size: 13px; font-weight: 700; }
 
