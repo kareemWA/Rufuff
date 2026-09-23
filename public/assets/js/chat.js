@@ -3,6 +3,7 @@ const messagesElement = document.getElementById("chatMessages");
 const chatForm = document.getElementById("chatForm");
 const chatText = document.getElementById("chatText");
 const chatStatus = document.getElementById("chatStatus");
+const chatImage = document.getElementById("chatImage");
 const chatNote = document.getElementById("chatNote");
 const roomButtons = Array.from(document.querySelectorAll(".chat-card"));
 const roomPicker = document.querySelector(".chat-cards");
@@ -20,6 +21,14 @@ let selectedConversationEmail = "";
 
 function escapeHtml(value) {
     return String(value ?? "").replace(/[&<>'"]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[character]));
+}
+
+function linkifyText(value) {
+    return escapeHtml(value).replace(/(https?:\/\/[^\s<]+)/gi, url => {
+        const cleanUrl = url.replace(/[),.!؟،]+$/g, "");
+        const trailing = url.slice(cleanUrl.length);
+        return `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer">${cleanUrl}</a>${trailing}`;
+    });
 }
 
 function showStatus(message, type = "") {
@@ -60,7 +69,8 @@ function renderMessages(messages) {
                 ${avatarMarkup}
                 <div class="chat-message-body">
                     <strong>${escapeHtml(message.userName)}</strong>
-                    <p>${escapeHtml(message.text)}</p>
+                    ${message.imageUrl ? `<img class="chat-message-image" src="${escapeHtml(message.imageUrl)}" alt="صورة مرفقة" data-src="${escapeHtml(message.imageUrl)}">` : ""}
+                    ${message.text ? `<p class="${message.text.length > 240 ? "is-collapsed" : ""}">${linkifyText(message.text)}</p>${message.text.length > 240 ? '<button class="chat-message-more" type="button">مشاهدة باقي الرسالة</button>' : ""}` : ""}
                     <time>${new Date(message.createdAt).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" })}</time>
                 </div>
             </article>`;
@@ -69,6 +79,16 @@ function renderMessages(messages) {
     messagesElement.querySelectorAll(".chat-message-avatar[data-src]").forEach(image => {
         image.style.cursor = "pointer";
         image.addEventListener("click", () => openImageViewer(image.dataset.src, image.alt));
+    });
+    messagesElement.querySelectorAll(".chat-message-image[data-src]").forEach(image => {
+        image.addEventListener("click", () => openImageViewer(image.dataset.src, image.alt));
+    });
+    messagesElement.querySelectorAll(".chat-message-more").forEach(button => {
+        button.addEventListener("click", () => {
+            const text = button.previousElementSibling;
+            text.classList.remove("is-collapsed");
+            button.remove();
+        });
     });
 
     messagesElement.scrollTop = messagesElement.scrollHeight;
@@ -189,16 +209,25 @@ if (!currentUser?.email) {
     chatForm.addEventListener("submit", async event => {
         event.preventDefault();
         const text = chatText.value.trim();
-        if (!text) return;
+        if (!text && !chatImage.files.length) return;
         showStatus("جارٍ إرسال الرسالة...");
         try {
+            let imageUrl = "";
+            if (chatImage.files.length) {
+                const uploadData = new FormData();
+                uploadData.append("image", chatImage.files[0]);
+                const uploadResponse = await fetch("/api/chat/uploads", { method: "POST", body: uploadData });
+                if (!uploadResponse.ok) throw new Error(await uploadResponse.text());
+                imageUrl = (await uploadResponse.json()).imageUrl;
+            }
             const response = await fetch("/api/chat/messages", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ room: currentRoom, text, recipientId: selectedConversation, recipientEmail: selectedConversationEmail })
+                body: JSON.stringify({ room: currentRoom, text, imageUrl, recipientId: selectedConversation, recipientEmail: selectedConversationEmail })
             });
             if (!response.ok) throw new Error(await response.text());
             chatText.value = "";
+            chatImage.value = "";
             showStatus("تم إرسال الرسالة.", "success");
             await loadMessages();
         } catch (error) {

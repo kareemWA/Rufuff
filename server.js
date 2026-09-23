@@ -36,6 +36,11 @@ const adminUpload = multer({
         callback(null, validCover || validPdf);
     }
 });
+const chatUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, callback) => callback(null, /^image\/(png|jpe?g|webp|gif)$/i.test(file.mimetype))
+});
 const configuredKashierPaymentUrl = process.env.KASHIER_PAYMENT_URL || "";
 const KASHIER_PAYMENT_URL = configuredKashierPaymentUrl.includes("/v3/payment/sessions")
     ? configuredKashierPaymentUrl
@@ -109,7 +114,8 @@ const commentSchema = new mongoose.Schema({
     userName: { type: String, required: true },
 
     rating: { type: Number, min: 1, max: 5 },
-    text: { type: String, required: true, trim: true, maxlength: 1000 }
+    text: { type: String, default: "", trim: true, maxlength: 1000 },
+    imageUrl: { type: String, default: null }
 }, { timestamps: true });
 commentSchema.index({ bookId: 1, createdAt: -1 });
 
@@ -492,6 +498,7 @@ app.get("/api/chat/messages", requireUser, async (req, res) => {
             userName: message.userName,
             userAvatar: message.userAvatar || null,
             text: message.text,
+            imageUrl: message.imageUrl || null,
             createdAt: message.createdAt,
             mine: normalizeEmail(message.userEmail) === normalizeEmail(req.currentUser.email)
         })));
@@ -505,7 +512,11 @@ app.post("/api/chat/messages", requireUser, async (req, res) => {
     try {
         const room = req.body.room === "founder" ? "founder" : "public";
         const text = String(req.body.text || "").trim();
-        if (!text || text.length > 1000) return res.status(400).send("اكتب رسالة من 1 إلى 1000 حرف");
+        const imageUrl = String(req.body.imageUrl || "").trim() || null;
+        if ((!text && !imageUrl) || text.length > 1000) return res.status(400).send("اكتب رسالة أو اختر صورة");
+        if (imageUrl && (!/^https:\/\//i.test(imageUrl) || !imageUrl.startsWith(`${SUPABASE_PUBLIC_URL}/`))) {
+            return res.status(400).send("رابط الصورة غير صالح");
+        }
         const isAdmin = req.currentUser.role === "admin" || isConfiguredAdminEmail(req.currentUser.email);
         let conversationUser = room === "founder" && isAdmin && mongoose.Types.ObjectId.isValid(req.body.recipientId)
             ? await User.findById(req.body.recipientId).select("_id email").lean()
@@ -523,17 +534,34 @@ app.post("/api/chat/messages", requireUser, async (req, res) => {
             userEmail: normalizeEmail(req.currentUser.email),
             userName: req.currentUser.name,
             userAvatar: req.currentUser.photo || req.currentUser.avatar || null,
-            text
+            text,
+            imageUrl
         });
         res.status(201).json({
             id: String(message._id), room: message.room, conversationEmail: message.conversationEmail,
             conversationUserId: message.conversationUserId ? String(message.conversationUserId) : null,
             userName: message.userName,
             userAvatar: message.userAvatar || null,
-            text: message.text, createdAt: message.createdAt, mine: true
+            text: message.text, imageUrl: message.imageUrl || null, createdAt: message.createdAt, mine: true
         });
     } catch (error) {
         res.status(500).send("تعذر إرسال الرسالة");
+    }
+});
+
+app.post("/api/chat/uploads", requireUser, (req, res, next) => {
+    chatUpload.single("image")(req, res, error => {
+        if (error) return res.status(400).send(error.code === "LIMIT_FILE_SIZE" ? "حجم الصورة يجب ألا يتجاوز 5 ميجابايت" : "اختر صورة بصيغة صحيحة");
+        next();
+    });
+}, async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).send("اختر صورة أولًا");
+        const imageUrl = await uploadToObjectStorage(req.file, "chat");
+        res.status(201).json({ imageUrl });
+    } catch (error) {
+        console.error("Chat image upload error:", error.message);
+        res.status(503).send("تعذر رفع الصورة");
     }
 });
 
