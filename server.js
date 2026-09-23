@@ -374,7 +374,15 @@ async function getCurrentUser(req) {
 
 async function requireUser(req, res, next) {
     try {
-        const user = await getCurrentUser(req);
+        let user;
+        try {
+            user = await getCurrentUser(req);
+        } catch (error) {
+            databaseState.promise = null;
+            await mongoose.disconnect().catch(() => {});
+            await connectDatabase();
+            user = await getCurrentUser(req);
+        }
         if (!user) return res.status(401).send("يجب تسجيل الدخول أولًا");
         req.currentUser = user;
         next();
@@ -1622,13 +1630,7 @@ globalThis.__rufuffDatabaseState = databaseState;
 
 async function connectDatabase() {
     if (mongoose.connection.readyState === 1) {
-        try {
-            await mongoose.connection.db.admin().ping();
-            return mongoose.connection;
-        } catch {
-            databaseState.promise = null;
-            await mongoose.disconnect().catch(() => {});
-        }
+        return mongoose.connection;
     }
 
     if (mongoose.connection.readyState === 0) {
@@ -1637,8 +1639,8 @@ async function connectDatabase() {
 
     if (!databaseState.promise) {
         databaseState.promise = mongoose.connect(MONGODB_URI, {
-            serverSelectionTimeoutMS: 4000,
-            connectTimeoutMS: 4000,
+            serverSelectionTimeoutMS: 10000,
+            connectTimeoutMS: 10000,
             socketTimeoutMS: 10000,
             maxPoolSize: 10,
             minPoolSize: 0,
