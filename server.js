@@ -509,7 +509,12 @@ app.get("/api/chat/messages", async (req, res, next) => {
         }
         let messages;
         try {
-            messages = await ChatMessage.find(filter).sort({ createdAt: -1 }).limit(100).lean();
+            const messageQuery = ChatMessage.find(filter)
+                .select("room conversationUserId conversationEmail userEmail userName userAvatar text imageUrl createdAt")
+                .limit(100);
+            messages = room === "public"
+                ? await messageQuery.lean()
+                : await messageQuery.sort({ createdAt: -1 }).lean();
         } catch (error) {
             console.error("Chat messages query error:", error);
             const isDatabaseNetworkError = /Mongo(Network|ServerSelection|Topology|Pool)/i.test(error?.name || "")
