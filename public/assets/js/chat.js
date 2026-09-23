@@ -21,6 +21,8 @@ const requestedRoom = new URLSearchParams(window.location.search).get("room");
 let currentRoom = "founder";
 let selectedConversation = "";
 let selectedConversationEmail = "";
+let messagesRequestInFlight = false;
+let messagesRetryDelay = 5000;
 
 function escapeHtml(value) {
     return String(value ?? "").replace(/[&<>'"]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[character]));
@@ -168,6 +170,8 @@ function hasValidConversationId(value) {
 }
 
 async function loadMessages() {
+    if (messagesRequestInFlight) return;
+    messagesRequestInFlight = true;
     try {
         const safeConversationId = hasValidConversationId(selectedConversation) ? selectedConversation : "";
         const conversationQuery = currentRoom === "founder" && selectedConversation
@@ -176,8 +180,12 @@ async function loadMessages() {
         const response = await fetch(`/api/chat/messages?room=${currentRoom}${conversationQuery}`);
         if (!response.ok) throw new Error(await response.text());
         renderMessages(await response.json());
+        messagesRetryDelay = 5000;
     } catch (error) {
         messagesElement.innerHTML = `<p class="no">${escapeHtml(error.message || "تعذر تحميل الرسائل")}</p>`;
+        messagesRetryDelay = Math.min(messagesRetryDelay * 2, 60000);
+    } finally {
+        messagesRequestInFlight = false;
     }
 }
 
@@ -304,8 +312,10 @@ if (!currentUser?.email) {
     });
 
     loadMessages();
-    window.setInterval(() => {
+    const pollMessages = () => {
         loadMessages();
         loadConversations();
-    }, 5000);
+        window.setTimeout(pollMessages, messagesRetryDelay);
+    };
+    window.setTimeout(pollMessages, messagesRetryDelay);
 }
